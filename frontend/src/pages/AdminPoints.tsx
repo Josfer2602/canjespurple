@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useRef } from 'react';
-import { MapPin, Plus, Loader2, Trash2, Map, Navigation, QrCode, Download, Printer, X, Key, ChevronDown, ChevronRight, Store, ShoppingBag, MoveRight } from 'lucide-react';
+import { Plus, Loader2, Trash2, Map, Navigation, QrCode, Download, Printer, X, Key, ChevronDown, ChevronRight, Store, ShoppingBag, MoveRight } from 'lucide-react';
 import { QRCodeCanvas } from 'qrcode.react';
 import AdminLayout from '../layouts/AdminLayout';
 import api from '../utils/api';

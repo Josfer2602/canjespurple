@@ -50,7 +50,7 @@ const ClientScanner: React.FC = () => {
         try {
           const res = await api.get(`/vouchers/${voucher.id}/status`);
           if (res.data.status !== 'PENDING') {
-            setVoucher(prev => ({ ...prev, status: res.data.status, code: res.data.code }));
+            setVoucher((prev: any) => ({ ...prev, status: res.data.status, code: res.data.code }));
             clearInterval(interval);
             if (res.data.status === 'APPROVED') {
               toast.success('¡Tu canje fue aprobado!');

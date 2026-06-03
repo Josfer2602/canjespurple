@@ -163,7 +163,7 @@ const AdminVisits: React.FC = () => {
                            </span>
                            {item.redemptions?.length > 0 && (
                              <p className="text-[9px] font-bold text-slate-400 w-32 truncate" title={
-                               Array.from(item.redemptions.reduce((acc: any, curr: any) => { acc.set(curr.reward, (acc.get(curr.reward)||0)+1); return acc; }, new Map()).entries()).map(([k, v]) => `${k} (x${v})`).join(', ')
+                               Array.from(item.redemptions.reduce((acc: any, curr: any) => { acc.set(curr.reward, (acc.get(curr.reward)||0)+1); return acc; }, new Map()).entries()).map(([k, v]: [any, any]) => `${k} (x${v})`).join(', ')
                              }>
                                {Array.from(item.redemptions.reduce((acc: any, curr: any) => { acc.set(curr.reward, 1); return acc; }, new Map()).keys()).join(', ')}
                              </p>
