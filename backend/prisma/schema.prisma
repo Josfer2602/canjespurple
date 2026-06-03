@@ -1,0 +1,204 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. Proyectos (Multi-tenant)
+model Project {
+  id           String   @id @default(uuid())
+  name         String
+  clientName   String
+  logoUrl      String?
+  config       Json     // Dynamic config: photo_slots, extra_fields, etc.
+  status       String   @default("ACTIVE")
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  users        User[]
+  points       Point[]
+  markets      Market[]
+  rules        RedemptionRule[]
+  inventory    Inventory[]
+  redemptions  Redemption[]
+  vouchers     Voucher[]
+}
+
+// 2. Usuarios (RBAC)
+model User {
+  id           String   @id @default(uuid())
+  projectId    String?
+  project      Project? @relation(fields: [projectId], references: [id])
+  email        String   @unique
+  passwordHash String
+  fullName     String
+  role         String   @default("STAFF") // ADMIN, SUPERVISOR, STAFF
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+
+  visits       Visit[]
+  inventory    Inventory[]
+  point        Point?
+}
+
+// 3. Mercados (agrupadores de PDVs)
+model Market {
+  id           String   @id @default(uuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id])
+  name         String
+  number       String?  // Ej: "N° 2", "Central"
+  address      String?
+  createdAt    DateTime @default(now())
+
+  points       Point[]
+}
+
+// 4. Puntos de Visita / PDV
+model Point {
+  id           String   @id @default(uuid())
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id])
+  marketId     String?
+  market       Market?  @relation(fields: [marketId], references: [id])
+  name         String
+  address      String?
+  location     Unsupported("geography(Point, 4326)")?
+  
+  // Datos del dueño del PDV
+  ownerName    String?
+  phone        String?
+  userId       String?  @unique
+  user         User?    @relation(fields: [userId], references: [id])
+
+  createdAt    DateTime @default(now())
+
+  visits       Visit[]
+  vouchers     Voucher[]
+}
+
+// 4. Catálogo de Productos
+model RedemptionItem {
+  id              String       @id @default(uuid())
+  redemptionId    String
+  redemption      Redemption   @relation(fields: [redemptionId], references: [id])
+  productName     String
+  quantity        Int
+  createdAt       DateTime     @default(now())
+}
+
+// 5. Reglas de Canje (Motor)
+model RedemptionRule {
+  id              String   @id @default(uuid())
+  projectId       String
+  project         Project  @relation(fields: [projectId], references: [id])
+  type            String   @default("BY_AMOUNT") // BY_AMOUNT, BY_PRODUCTS
+  minPurchase     Decimal  @db.Decimal(10, 2)
+  maxPurchase     Decimal  @db.Decimal(10, 2)
+  rewardName      String
+  comboProducts   Json     @default("[]")
+  productCriteria Json     @default("{}") // Criterios dinámicos si type == BY_PRODUCTS
+  isActive        Boolean  @default(true)
+}
+
+// 5. Inventario
+model Inventory {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id])
+  itemName     String
+  stock        Int      @default(0)
+  threshold    Int      @default(5)
+  isActive     Boolean  @default(true)
+  updatedAt    DateTime @updatedAt
+  logs         InventoryLog[]
+}
+
+// 6. Visitas
+model Visit {
+  id           String   @id @default(uuid())
+  userId       String
+  user         User     @relation(fields: [userId], references: [id])
+  pointId      String
+  point        Point    @relation(fields: [pointId], references: [id])
+  startTime    DateTime @default(now())
+  endTime      DateTime?
+  facadePhoto  String?
+  location     Unsupported("geography(Point, 4326)")?
+  isActive     Boolean  @default(true)
+
+  redemptions  Redemption[]
+}
+
+// 8. Canjes (Audit)
+model Redemption {
+  id           String   @id @default(uuid())
+  visitId      String
+  visit        Visit    @relation(fields: [visitId], references: [id])
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id])
+  dni          String
+  amount       Decimal  @db.Decimal(10, 2) // Optional if BY_PRODUCTS but we can keep it as total paid if any
+  ticketNo     String
+  reward       String
+  extraData    Json     @default("{}")
+  photos       Json     @default("[]")
+  location     Unsupported("geography(Point, 4326)")?
+  
+  voucherId    String?  @unique
+  voucher      Voucher? @relation(fields: [voucherId], references: [id])
+
+  createdAt    DateTime @default(now())
+
+  items        RedemptionItem[]
+
+  @@index([dni])
+}
+
+// 7.5 Vouchers de Cliente (Triangulación B2B2C)
+model Voucher {
+  id           String   @id @default(uuid())
+  code         String   @unique
+  projectId    String
+  project      Project  @relation(fields: [projectId], references: [id])
+  pointId      String
+  point        Point    @relation(fields: [pointId], references: [id])
+  dni          String
+  phone        String?
+  ticketNo     String
+  amount       Decimal  @db.Decimal(10, 2)
+  extraData    Json     @default("{}")
+  photos       Json     @default("[]")
+  status       String   @default("PENDING") // PENDING, APPROVED, REDEEMED
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  redemption   Redemption?
+}
+
+// 8. Histórico Anti-fraude
+model DniHistory {
+  dni           String
+  projectId     String
+  count         Int      @default(1)
+  lastRedemption DateTime @default(now())
+
+  @@id([dni, projectId])
+}
+
+// 9. Historial de Stock
+model InventoryLog {
+  id           String   @id @default(uuid())
+  inventoryId  String
+  inventory    Inventory @relation(fields: [inventoryId], references: [id], onDelete: Cascade)
+  addedStock   Int
+  previousStock Int
+  newStock     Int
+  projectId    String
+  createdAt    DateTime @default(now())
+}

@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-[#F8FAFC] font-sans text-slate-900 antialiased;
+  }
+
+  h1, h2, h3, h4 {
+    @apply tracking-tight;
+  }
+}
+
+@layer components {
+  /* Glassmorphism Cards */
+  .glass-card {
+    @apply bg-white/70 backdrop-blur-xl border border-white/50 rounded-3xl shadow-[0_8px_32px_rgba(0,0,0,0.04)];
+  }
+
+  /* Premium Buttons */
+  .btn-primary {
+    @apply bg-brand-teal hover:brightness-110 text-white rounded-2xl transition-all active:scale-95 disabled:opacity-50 disabled:active:scale-100 flex items-center justify-center gap-2;
+  }
+
+  .btn-outline {
+    @apply bg-white border-2 border-slate-100 hover:border-brand-purple/10 text-slate-600 rounded-2xl transition-all active:scale-95 flex items-center justify-center gap-2;
+  }
+
+  /* Form Inputs Premium */
+  .form-input {
+    @apply w-full bg-white border border-slate-200 rounded-2xl px-5 py-4 text-sm focus:outline-none focus:ring-4 focus:ring-brand-purple/10 focus:border-brand-purple/40 transition-all placeholder:text-slate-300 font-medium;
+  }
+
+  /* Interactive Elements */
+  .hover-glow {
+    @apply transition-all duration-300 hover:shadow-[0_0_20px_rgba(107,0,150,0.15)] hover:border-brand-purple/20;
+  }
+
+  .nav-active {
+    @apply text-brand-purple relative;
+  }
+}
+
+.nav-active::after {
+  content: '';
+  position: absolute;
+  bottom: 0px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 4px;
+  height: 4px;
+  background-color: #6b0096;
+  border-radius: 9999px;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
