@@ -17,7 +17,7 @@ const PORT = process.env.PORT || 4000;
 
 // Middleware
 app.use(cors({ 
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://127.0.0.1:5173', 'http://127.0.0.1:5174', 'http://192.168.101.12:5173'],
+  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://127.0.0.1:5173', 'http://127.0.0.1:5174', 'http://192.168.101.12:5173', process.env.FRONTEND_URL || 'https://canjes.simplegoapp.de'],
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
