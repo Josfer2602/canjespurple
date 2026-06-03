@@ -17,15 +17,14 @@ services:
       context: ./backend
     container_name: btl_backend
     restart: always
+    ports:
+      - "127.0.0.1:4000:4000"
     depends_on:
       - db
     environment:
-      # Database URL usa el nombre del contenedor 'db'
       - DATABASE_URL=postgresql://postgres:password_btl_2026@db:5432/btl_saas?schema=public
       - NODE_ENV=production
       - FRONTEND_URL=https://canjes.simplegoapp.de
-      # Importante: El resto de variables como JWT_SECRET o las de Google Drive 
-      # se deben inyectar en el servidor a través de un archivo .env si no se ponen aquí
     env_file:
       - ./backend/.env
 
@@ -34,25 +33,11 @@ services:
       context: ./frontend
     container_name: btl_frontend
     restart: always
-    depends_on:
-      - backend
-
-  caddy:
-    image: caddy:2-alpine
-    container_name: btl_caddy
-    restart: always
     ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
-      - caddy_data:/data
-      - caddy_config:/config
+      - "127.0.0.1:3000:80"
     depends_on:
-      - frontend
       - backend
 
 volumes:
   postgres_data:
-  caddy_data:
-  caddy_config:
+
