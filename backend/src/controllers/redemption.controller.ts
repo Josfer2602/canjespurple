@@ -93,8 +93,8 @@ export const createRedemption = async (req: Request, res: Response) => {
         ...(items && items.length > 0 && {
           items: {
             create: items.map((item: any) => ({
-              presentationId: item.presentationId,
-              quantity: item.quantity
+              productName: item.productName || item.presentationId,
+              quantity: parseInt(item.quantity, 10) || 1
             }))
           }
         })

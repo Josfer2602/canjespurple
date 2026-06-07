@@ -15,7 +15,7 @@ const getActiveVisit = async (req, res) => {
                 endTime: null,
                 isActive: true
             },
-            include: { point: true }
+            include: { point: true, market: true }
         });
         res.json(activeVisit);
     }
@@ -43,8 +43,11 @@ const endVisit = async (req, res) => {
 exports.endVisit = endVisit;
 const startVisit = async (req, res) => {
     try {
-        const { userId, pointId, facadePhoto, coords } = req.body;
-        console.log(`[START_VISIT] Intentando iniciar para User:${userId} en Point:${pointId}`);
+        const { userId, pointId, marketId, facadePhoto, coords } = req.body;
+        console.log(`[START_VISIT] Intentando iniciar para User:${userId} en Point:${pointId} Market:${marketId}`);
+        if (!pointId && !marketId) {
+            return res.status(400).json({ message: 'Se requiere pointId o marketId.' });
+        }
         // Check for active visit
         const activeVisit = await db_1.default.visit.findFirst({
             where: { userId, endTime: null, isActive: true }
@@ -53,21 +56,33 @@ const startVisit = async (req, res) => {
             return res.status(400).json({ message: 'Ya tienes una visita activa. Ciérrala antes de abrir una nueva.' });
         }
         const user = await db_1.default.user.findUnique({ where: { id: userId }, include: { project: true } });
-        const point = await db_1.default.point.findUnique({ where: { id: pointId } });
         if (!user) {
             console.warn('⚠️ Usuario no encontrado en la DB');
             return res.status(404).json({ message: 'Usuario no válido. ¿Hiciste login real?' });
         }
-        if (!point) {
-            console.warn('⚠️ Punto no encontrado en la DB');
-            return res.status(404).json({ message: 'Punto de venta no válido.' });
+        let point = null;
+        let market = null;
+        let pointFolderName = '';
+        if (pointId) {
+            point = await db_1.default.point.findUnique({ where: { id: pointId } });
+            if (!point)
+                return res.status(404).json({ message: 'Punto de venta no válido.' });
+            pointFolderName = point.name;
         }
-        // Subir foto de fachada a Drive
+        else if (marketId) {
+            market = await db_1.default.market.findUnique({ where: { id: marketId } });
+            if (!market)
+                return res.status(404).json({ message: 'Mercado no válido.' });
+            pointFolderName = market.name;
+        }
+        // Subir foto de fachada a Drive con nueva estructura
         console.log('🔄 Subiendo foto a Google Drive...');
         const driveRootId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+        const today = new Date().toISOString().split('T')[0];
+        const altaFolder = 'Alta';
         let photoUrl = '';
         try {
-            photoUrl = await drive_service_1.default.uploadImage(facadePhoto, `fachada_${point.name}_${Date.now()}.jpg`, [user.project.name, point.name], driveRootId);
+            photoUrl = await drive_service_1.default.uploadImage(facadePhoto, `${today}_Alta.jpg`, [user.project?.name || 'General', pointFolderName || 'Desconocido', today, altaFolder], driveRootId);
             console.log('✅ Foto subida con éxito:', photoUrl);
         }
         catch (driveErr) {
@@ -81,7 +96,8 @@ const startVisit = async (req, res) => {
         const visit = await db_1.default.visit.create({
             data: {
                 userId,
-                pointId,
+                pointId: pointId || null,
+                marketId: marketId || null,
                 facadePhoto: photoUrl,
                 isActive: true
             }

@@ -10,9 +10,13 @@ const db_1 = __importDefault(require("../config/db"));
 const login = async (req, res) => {
     try {
         const { email, password } = req.body;
+        console.log('Login attempt:', { email, passwordLength: password?.length });
         const user = await db_1.default.user.findUnique({
             where: { email },
-            include: { project: true }
+            include: {
+                project: true,
+                point: true
+            }
         });
         if (!user) {
             return res.status(401).json({ message: 'Credenciales inválidas' });
@@ -28,7 +32,8 @@ const login = async (req, res) => {
                 id: user.id,
                 email: user.email,
                 fullName: user.fullName,
-                role: user.role
+                role: user.role,
+                point: user.point
             },
             project: user.project
         });

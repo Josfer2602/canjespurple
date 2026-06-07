@@ -66,10 +66,11 @@ class DriveService {
                     mimeType: 'image/jpeg',
                     body: stream
                 },
-                fields: 'id, webViewLink',
+                fields: 'id, webViewLink, webContentLink',
                 ...driveFlags
             });
-            return response.data.webViewLink || '';
+            const fileId = response.data.id;
+            return fileId ? `https://drive.google.com/uc?export=view&id=${fileId}` : '';
         }
         catch (error) {
             console.error('Error en uploadImage Drive:', error.message);
@@ -98,6 +99,16 @@ class DriveService {
             supportsTeamDrives: true
         });
         return res.data.id;
+    }
+    async getFileStream(fileId) {
+        try {
+            const res = await this.drive.files.get({ fileId, alt: 'media', supportsAllDrives: true }, { responseType: 'stream' });
+            return res.data;
+        }
+        catch (error) {
+            console.error('Error obteniendo stream de Drive:', error.message);
+            throw error;
+        }
     }
 }
 exports.default = new DriveService();

@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.deleteRedemption = exports.updateRedemption = exports.getAdminRedemptions = exports.deactivateInventory = exports.deleteRule = exports.deletePoint = exports.deleteStaff = exports.deleteProject = exports.getInventory = exports.createProject = exports.getProjects = exports.getProject = exports.updateProjectConfig = exports.createPoint = exports.getPoints = exports.createStaff = exports.saveRule = exports.getRules = exports.assignStock = exports.getStaff = exports.resetData = void 0;
+exports.getAdminVisits = exports.deleteRedemption = exports.updateRedemption = exports.getAdminRedemptions = exports.deactivateInventory = exports.deleteRule = exports.updatePoint = exports.deletePoint = exports.deleteStaff = exports.deleteProject = exports.getInventory = exports.createProject = exports.getProjects = exports.getProject = exports.updateProjectConfig = exports.generatePdvAccess = exports.deleteMarket = exports.createMarket = exports.getMarkets = exports.createPoint = exports.getPoints = exports.createStaff = exports.saveRule = exports.getRules = exports.getInventoryLogs = exports.assignStock = exports.getStaff = exports.resetData = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const db_1 = __importDefault(require("../config/db"));
 // 1. Reset System Data ( transactional cleanup )
@@ -35,8 +35,7 @@ const getStaff = async (req, res) => {
         const { projectId } = req.query;
         const staff = await db_1.default.user.findMany({
             where: {
-                projectId: projectId,
-                role: { in: ['STAFF', 'SUPERVISOR'] }
+                projectId: projectId
             },
             select: { id: true, email: true, fullName: true, role: true, isActive: true, createdAt: true }
         });
@@ -50,31 +49,52 @@ exports.getStaff = getStaff;
 // 2.1 Assign Stock to Staff
 const assignStock = async (req, res) => {
     try {
-        const { userId, projectId, itemName, stockToAdd, threshold } = req.body;
-        if (!userId || !projectId || !itemName) {
-            return res.status(400).json({ message: 'UserId, ProjectId e ItemName son obligatorios' });
+        const { userId, marketId, pointId, projectId, itemName, stockToAdd, threshold } = req.body;
+        if ((!userId && !marketId && !pointId) || !projectId || !itemName) {
+            return res.status(400).json({ message: 'Se requiere UserId, MarketId o PointId, además de ProjectId e ItemName' });
         }
-        // Buscamos si ya existe el registro (activo o inactivo) para este canjista y producto
-        const existing = await db_1.default.inventory.findFirst({
-            where: { userId, projectId, itemName }
-        });
-        const inventory = await db_1.default.inventory.upsert({
-            where: {
-                id: existing?.id || '00000000-0000-0000-0000-000000000000'
-            },
-            update: {
-                stock: { increment: stockToAdd },
-                threshold: threshold || 5,
-                isActive: true // Reactivamos si estaba desactivado
-            },
-            create: {
-                userId,
-                projectId,
-                itemName,
-                stock: stockToAdd,
-                threshold: threshold || 5,
-                isActive: true
-            }
+        const inventory = await db_1.default.$transaction(async (tx) => {
+            // Build where clause to find existing
+            const whereExisting = { projectId, itemName };
+            if (userId)
+                whereExisting.userId = userId;
+            if (marketId)
+                whereExisting.marketId = marketId;
+            if (pointId)
+                whereExisting.pointId = pointId;
+            const existing = await tx.inventory.findFirst({
+                where: whereExisting
+            });
+            const updated = await tx.inventory.upsert({
+                where: {
+                    id: existing?.id || '00000000-0000-0000-0000-000000000000'
+                },
+                update: {
+                    stock: { increment: stockToAdd },
+                    threshold: threshold || 5,
+                    isActive: true
+                },
+                create: {
+                    userId: userId || null,
+                    marketId: marketId || null,
+                    pointId: pointId || null,
+                    projectId,
+                    itemName,
+                    stock: stockToAdd,
+                    threshold: threshold || 5,
+                    isActive: true
+                }
+            });
+            await tx.inventoryLog.create({
+                data: {
+                    inventoryId: updated.id,
+                    addedStock: stockToAdd,
+                    previousStock: existing ? existing.stock : 0,
+                    newStock: existing ? existing.stock + stockToAdd : stockToAdd,
+                    projectId
+                }
+            });
+            return updated;
         });
         res.json({ success: true, inventory });
     }
@@ -84,6 +104,21 @@ const assignStock = async (req, res) => {
     }
 };
 exports.assignStock = assignStock;
+const getInventoryLogs = async (req, res) => {
+    try {
+        const { id } = req.params; // inventoryId
+        const logs = await db_1.default.inventoryLog.findMany({
+            where: { inventoryId: id },
+            orderBy: { createdAt: 'desc' },
+            take: 50
+        });
+        res.json(logs);
+    }
+    catch (error) {
+        res.status(500).json({ message: 'Error fetching inventory logs', detail: error.message });
+    }
+};
+exports.getInventoryLogs = getInventoryLogs;
 // 2.2 Redemption Rules (Lineamientos)
 const getRules = async (req, res) => {
     try {
@@ -101,16 +136,16 @@ const getRules = async (req, res) => {
 exports.getRules = getRules;
 const saveRule = async (req, res) => {
     try {
-        const { id, projectId, minPurchase, maxPurchase, rewardName } = req.body;
+        const { id, projectId, minPurchase, maxPurchase, rewardName, type, productCriteria } = req.body;
         if (id) {
             const rule = await db_1.default.redemptionRule.update({
                 where: { id },
-                data: { minPurchase, maxPurchase, rewardName }
+                data: { minPurchase, maxPurchase, rewardName, type: type || 'BY_AMOUNT', productCriteria: productCriteria || {} }
             });
             return res.json({ success: true, rule });
         }
         const rule = await db_1.default.redemptionRule.create({
-            data: { projectId, minPurchase, maxPurchase, rewardName }
+            data: { projectId, minPurchase, maxPurchase, rewardName, type: type || 'BY_AMOUNT', productCriteria: productCriteria || {} }
         });
         res.json({ success: true, rule });
     }
@@ -122,20 +157,28 @@ exports.saveRule = saveRule;
 const createStaff = async (req, res) => {
     try {
         const { email, password, fullName, projectId, role } = req.body;
+        // Validate project existence
+        if (projectId) {
+            const projectExists = await db_1.default.project.findUnique({ where: { id: projectId } });
+            if (!projectExists) {
+                return res.status(400).json({ message: 'El proyecto seleccionado no existe. Por favor, selecciona un proyecto válido.' });
+            }
+        }
         const passwordHash = await bcryptjs_1.default.hash(password || 'staff123', 10);
         const user = await db_1.default.user.create({
             data: {
                 email,
                 passwordHash,
                 fullName,
-                projectId,
+                projectId: projectId || null,
                 role: role || 'STAFF'
             }
         });
         res.json({ success: true, user: { id: user.id, email: user.email, fullName: user.fullName } });
     }
     catch (error) {
-        res.status(500).json({ message: 'Error creating staff', detail: error.message });
+        console.error('Error creating staff:', error);
+        res.status(500).json({ message: 'Error creando staff', detail: error.message });
     }
 };
 exports.createStaff = createStaff;
@@ -143,8 +186,12 @@ exports.createStaff = createStaff;
 const getPoints = async (req, res) => {
     try {
         const { projectId } = req.query;
+        const whereClause = {};
+        if (projectId && projectId !== 'undefined' && projectId !== 'null') {
+            whereClause.projectId = projectId;
+        }
         const points = await db_1.default.point.findMany({
-            where: { projectId: projectId },
+            where: whereClause,
             orderBy: { name: 'asc' }
         });
         res.json(points);
@@ -156,9 +203,9 @@ const getPoints = async (req, res) => {
 exports.getPoints = getPoints;
 const createPoint = async (req, res) => {
     try {
-        const { name, address, projectId } = req.body;
+        const { name, address, projectId, ownerName, phone, marketId } = req.body;
         const point = await db_1.default.point.create({
-            data: { name, address, projectId }
+            data: { name, address, projectId, ownerName, phone, marketId: marketId || null }
         });
         res.json({ success: true, point });
     }
@@ -167,15 +214,101 @@ const createPoint = async (req, res) => {
     }
 };
 exports.createPoint = createPoint;
+// 3.5 Markets CRUD
+const getMarkets = async (req, res) => {
+    try {
+        const { projectId } = req.query;
+        const markets = await db_1.default.market.findMany({
+            where: { projectId: projectId },
+            include: { points: { select: { id: true, name: true, ownerName: true, phone: true, userId: true } } },
+            orderBy: { name: 'asc' }
+        });
+        res.json(markets);
+    }
+    catch (error) {
+        res.status(500).json({ message: 'Error fetching markets', detail: error.message });
+    }
+};
+exports.getMarkets = getMarkets;
+const createMarket = async (req, res) => {
+    try {
+        const { name, number, address, projectId } = req.body;
+        // Generar código automático si no se envía
+        const generatedNumber = number || `MK-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
+        const market = await db_1.default.market.create({
+            data: { name, number: generatedNumber, address, projectId }
+        });
+        res.json({ success: true, market });
+    }
+    catch (error) {
+        res.status(500).json({ message: 'Error creating market', detail: error.message });
+    }
+};
+exports.createMarket = createMarket;
+const deleteMarket = async (req, res) => {
+    const { id } = req.params;
+    try {
+        // Primero desligar PDVs del mercado
+        await db_1.default.point.updateMany({ where: { marketId: id }, data: { marketId: null } });
+        await db_1.default.market.delete({ where: { id } });
+        res.json({ success: true, message: 'Mercado eliminado' });
+    }
+    catch (err) {
+        res.status(500).json({ error: 'Error al eliminar mercado', detail: err.message });
+    }
+};
+exports.deleteMarket = deleteMarket;
+const generatePdvAccess = async (req, res) => {
+    try {
+        const { id } = req.params; // Point ID
+        const point = await db_1.default.point.findUnique({ where: { id } });
+        if (!point)
+            return res.status(404).json({ message: 'Punto no encontrado' });
+        // Si ya tiene usuario asignado, no hacemos nada o lo retornamos
+        if (point.userId) {
+            return res.status(400).json({ message: 'Este punto ya tiene un acceso generado. No se puede crear múltiples cuentas para el mismo punto.' });
+        }
+        // Generar credenciales: El email será un DNI ficticio o el telefono@pdv.com, o pdv_[id]@domain.com.
+        // Usaremos pdv_[shortid]@btl.com
+        const shortId = point.id.substring(0, 6);
+        const email = `pdv_${shortId}@canjes.com`;
+        const plainPassword = Math.random().toString(36).substring(2, 8).toUpperCase();
+        const passwordHash = await bcryptjs_1.default.hash(plainPassword, 10);
+        const pdvUser = await db_1.default.user.create({
+            data: {
+                email,
+                passwordHash,
+                fullName: point.ownerName || point.name,
+                projectId: point.projectId,
+                role: 'PDV'
+            }
+        });
+        const updatedPoint = await db_1.default.point.update({
+            where: { id: point.id },
+            data: { userId: pdvUser.id }
+        });
+        res.json({
+            success: true,
+            point: updatedPoint,
+            credentials: { email, password: plainPassword }
+        });
+    }
+    catch (err) {
+        console.error('Error generando acceso PDV', err);
+        res.status(500).json({ message: 'Error generando credenciales', detail: err.message });
+    }
+};
+exports.generatePdvAccess = generatePdvAccess;
 // 4. Update Project Config
 const updateProjectConfig = async (req, res) => {
     try {
-        const { projectId, name, clientName, config } = req.body;
+        const { projectId, name, clientName, logoUrl, config } = req.body;
         const project = await db_1.default.project.update({
             where: { id: projectId },
             data: {
                 name,
                 clientName,
+                logoUrl: logoUrl || null,
                 config: config || {}
             }
         });
@@ -237,20 +370,23 @@ const createProject = async (req, res) => {
 exports.createProject = createProject;
 const getInventory = async (req, res) => {
     try {
-        const { projectId, userId } = req.query;
+        const { projectId, userId, marketId, pointId } = req.query;
         const whereClause = {
             projectId: projectId,
             isActive: true
         };
-        if (userId) {
+        if (userId)
             whereClause.userId = userId;
-        }
+        if (marketId)
+            whereClause.marketId = marketId;
+        if (pointId)
+            whereClause.pointId = pointId;
         const inventory = await db_1.default.inventory.findMany({
             where: whereClause,
             include: {
-                user: {
-                    select: { fullName: true, email: true }
-                }
+                user: { select: { fullName: true, email: true } },
+                market: { select: { name: true } },
+                point: { select: { name: true } }
             },
             orderBy: { itemName: 'asc' }
         });
@@ -267,7 +403,11 @@ const deleteProject = async (req, res) => {
     try {
         await db_1.default.$transaction(async (tx) => {
             // Deletion order matters for FK constraints
+            // 1. Vouchers primero (nueva tabla B2B2C)
+            await tx.voucher.deleteMany({ where: { projectId: id } });
+            // 2. Redemptions
             await tx.redemption.deleteMany({ where: { projectId: id } });
+            // 3. Visits
             await tx.visit.deleteMany({
                 where: {
                     OR: [
@@ -276,11 +416,18 @@ const deleteProject = async (req, res) => {
                     ]
                 }
             });
+            // 4. Resto
             await tx.dniHistory.deleteMany({ where: { projectId: id } });
+            await tx.inventoryLog.deleteMany({ where: { inventory: { projectId: id } } });
             await tx.inventory.deleteMany({ where: { projectId: id } });
             await tx.redemptionRule.deleteMany({ where: { projectId: id } });
+            // 5. Desligar userId de Points y limpiar marketId
+            await tx.point.updateMany({ where: { projectId: id }, data: { userId: null, marketId: null } });
+            await tx.user.deleteMany({ where: { projectId: id, role: { not: 'ADMIN' } } });
             await tx.point.deleteMany({ where: { projectId: id } });
-            await tx.user.deleteMany({ where: { projectId: id } });
+            // 6. Mercados
+            await tx.market.deleteMany({ where: { projectId: id } });
+            // 7. Proyecto
             await tx.project.delete({ where: { id } });
         });
         res.json({ success: true, message: 'Proyecto y toda su data eliminados con éxito' });
@@ -306,6 +453,19 @@ exports.deleteStaff = deleteStaff;
 const deletePoint = async (req, res) => {
     const { id } = req.params;
     try {
+        // 1. Borrar vouchers del punto (B2B2C)
+        await db_1.default.voucher.deleteMany({ where: { pointId: id } });
+        // 2. Borrar redemptions de las visitas de este punto
+        const visits = await db_1.default.visit.findMany({ where: { pointId: id }, select: { id: true } });
+        const visitIds = visits.map((v) => v.id);
+        if (visitIds.length) {
+            await db_1.default.redemption.deleteMany({ where: { visitId: { in: visitIds } } });
+        }
+        // 3. Borrar visitas
+        await db_1.default.visit.deleteMany({ where: { pointId: id } });
+        // 4. Desligar usuario y mercado
+        await db_1.default.point.update({ where: { id }, data: { userId: null, marketId: null } });
+        // 5. Borrar el punto
         await db_1.default.point.delete({ where: { id } });
         res.json({ success: true, message: 'Punto eliminado' });
     }
@@ -314,6 +474,21 @@ const deletePoint = async (req, res) => {
     }
 };
 exports.deletePoint = deletePoint;
+const updatePoint = async (req, res) => {
+    const { id } = req.params;
+    const { marketId } = req.body;
+    try {
+        const point = await db_1.default.point.update({
+            where: { id },
+            data: { marketId: marketId || null }
+        });
+        res.json({ success: true, point });
+    }
+    catch (err) {
+        res.status(500).json({ error: 'Error al actualizar punto', detail: err.message });
+    }
+};
+exports.updatePoint = updatePoint;
 const deleteRule = async (req, res) => {
     const { id } = req.params;
     try {
@@ -386,35 +561,69 @@ const updateRedemption = async (req, res) => {
 exports.updateRedemption = updateRedemption;
 const deleteRedemption = async (req, res) => {
     const { id } = req.params;
+    console.log(`[DELETE] Request for ID: ${id}`);
     try {
         const redemption = await db_1.default.redemption.findUnique({
             where: { id },
             include: { visit: true }
         });
         if (!redemption) {
+            console.warn(`[DELETE] Item not found: ${id}`);
             return res.status(404).json({ message: 'Canje no encontrado' });
         }
-        await db_1.default.$transaction(async (tx) => {
-            // Devolver stock si era un premio y no uno "Promocional" estático
-            if (redemption.reward && redemption.reward !== 'Promocional' && redemption.projectId) {
-                await tx.inventory.updateMany({
-                    where: {
-                        userId: redemption.visit.userId,
-                        projectId: redemption.projectId,
-                        itemName: redemption.reward
-                    },
-                    data: {
-                        stock: { increment: 1 }
-                    }
-                });
-            }
-            await tx.redemption.delete({ where: { id } });
-        });
+        console.log(`[DELETE] Found redemption for DNI: ${redemption.dni}`);
+        // Devolver stock si era un premio y no uno "Promocional" estático
+        if (redemption.reward && redemption.reward !== 'Promocional' && redemption.projectId) {
+            console.log(`[DELETE] Restoring stock for: ${redemption.reward}`);
+            await db_1.default.inventory.updateMany({
+                where: {
+                    userId: redemption.visit.userId,
+                    projectId: redemption.projectId,
+                    itemName: redemption.reward
+                },
+                data: {
+                    stock: { increment: 1 }
+                }
+            });
+            console.log(`[DELETE] Stock restored successfully.`);
+        }
+        console.log(`[DELETE] Removing record from database...`);
+        await db_1.default.redemption.delete({ where: { id } });
+        console.log(`[DELETE] Database record removed.`);
         res.json({ success: true, message: 'Canje eliminado y stock restaurado' });
     }
     catch (error) {
-        console.error('Error deleting redemption:', error);
+        console.error('[DELETE ERROR]:', error);
         res.status(500).json({ error: 'Error al borrar canje', detail: error.message });
     }
 };
 exports.deleteRedemption = deleteRedemption;
+// 14. Visits (Admin Check-Ins)
+const getAdminVisits = async (req, res) => {
+    try {
+        const { projectId } = req.query;
+        // We only fetch visits where the user making the visit belongs to the projectId 
+        // or the point belongs to it. Since user.projectId maps mostly, let's filter by user project
+        // or point project. The safest is getting by point.projectId or user.projectId.
+        // In our schema, point has projectId.
+        const visits = await db_1.default.visit.findMany({
+            where: {
+                point: {
+                    projectId: projectId
+                }
+            },
+            include: {
+                user: { select: { fullName: true } },
+                point: { select: { name: true } },
+                redemptions: { select: { reward: true } }
+            },
+            orderBy: { startTime: 'desc' }
+        });
+        res.json(visits);
+    }
+    catch (error) {
+        console.error('Error fetching admin visits:', error);
+        res.status(500).json({ message: 'Error fetching visits', detail: error.message });
+    }
+};
+exports.getAdminVisits = getAdminVisits;

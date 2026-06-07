@@ -3,76 +3,138 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getHistory = exports.createRedemption = void 0;
+exports.checkDniLimit = exports.getHistory = exports.createRedemption = void 0;
 const db_1 = __importDefault(require("../config/db"));
 const drive_service_1 = __importDefault(require("../services/drive.service"));
 const createRedemption = async (req, res) => {
     try {
-        const { projectId, visitId, pointId, ticketNumber, // Viene del frontend como ticketNumber
-        purchaseAmount, // Viene del frontend como purchaseAmount
-        consumerDni, photos, extraData } = req.body;
+        const { projectId, visitId, ticketNumber, purchaseAmount, consumerDni, photos, extraData, coords, voucherId, items // { presentationId, quantity }[]
+         } = req.body;
         console.log(`[REDEMPTION] Intentando para Visit:${visitId} - DNI:${consumerDni}`);
-        // 1. Validar Visita
+        // 1. Validar campos requeridos
+        if (!visitId || !consumerDni || !projectId) {
+            return res.status(400).json({ message: 'Faltan campos requeridos: visitId, consumerDni, projectId' });
+        }
+        let voucher = null;
+        let uploadedPhotos = [];
+        // 3. Validar Visita
         const visit = await db_1.default.visit.findUnique({
             where: { id: visitId },
             include: {
                 point: true,
+                market: true,
                 user: { include: { project: true } }
             }
         });
         if (!visit) {
             return res.status(404).json({ message: 'Sesión de visita no encontrada. Reinicia el punto.' });
         }
-        // 2. Subir Fotos a Drive (Carpeta del Proyecto > Punto > Canje_DNI)
-        const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
-        const projectFolderName = visit.user.project?.name || 'Varios';
-        const pointFolderName = visit.point.name;
-        const redemptionFolderName = `CANJE_${consumerDni}_${Date.now()}`;
-        // Simulamos subida múltiple (en producción esto debería ser paralelo)
-        const uploadedPhotos = [];
-        for (const [key, base64] of Object.entries(photos)) {
-            const url = await drive_service_1.default.uploadImage(base64, `${key}_${consumerDni}.jpg`, [projectFolderName, pointFolderName, redemptionFolderName], folderId);
-            uploadedPhotos.push(url);
+        if (voucherId) {
+            // Flujo B2B2C: El ticket ya fue subido a drive y aprobado por PDV
+            voucher = await db_1.default.voucher.findUnique({ where: { id: voucherId } });
+            if (!voucher || voucher.status !== 'APPROVED') {
+                return res.status(400).json({ message: 'Voucher inválido o no está en estado APROBADO.' });
+            }
+            uploadedPhotos = Array.isArray(voucher.photos) ? voucher.photos : [];
+            console.log(`✅ Usando fotos desde Voucher: ${voucher.code}`);
         }
-        // 3. Guardar en DB
+        else {
+            // Flujo Directo de Staff
+            // 2. Validar que haya fotos
+            if (!photos || Object.keys(photos).length === 0) {
+                return res.status(400).json({ message: 'Debes adjuntar al menos una foto como evidencia.' });
+            }
+            // 5. Subir fotos a Drive OBLIGATORIAMENTE
+            const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID;
+            const projectFolderName = visit.user.project?.name || 'Varios';
+            const pointFolderName = visit.point?.name || visit.market?.name || 'General';
+            const today = new Date().toISOString().split('T')[0];
+            console.log(`[DRIVE] Subiendo ${Object.keys(photos).length} foto(s) para DNI:${consumerDni}...`);
+            for (const [key, base64] of Object.entries(photos)) {
+                const url = await drive_service_1.default.uploadImage(base64, `${key}_${Date.now()}.jpg`, [projectFolderName, pointFolderName, today, consumerDni], folderId);
+                uploadedPhotos.push(url);
+                console.log(`✅ Foto subida: ${url}`);
+            }
+            console.log(`✅ Todas las fotos subidas a Drive (${uploadedPhotos.length})`);
+        }
+        // 5. Guardar canje en DB con URLs de Drive
         const redemption = await db_1.default.redemption.create({
             data: {
                 visitId,
                 projectId,
                 dni: consumerDni,
-                amount: purchaseAmount, // Mapeamos purchaseAmount a field 'amount'
-                ticketNo: ticketNumber, // Mapeamos ticketNumber a field 'ticketNo'
+                amount: purchaseAmount || 0,
+                ticketNo: ticketNumber || '',
                 reward: extraData?.reward || 'Promocional',
                 photos: uploadedPhotos,
-                extraData: extraData || {}
+                extraData: extraData || {},
+                voucherId: voucherId || null,
+                ...(items && items.length > 0 && {
+                    items: {
+                        create: items.map((item) => ({
+                            presentationId: item.presentationId,
+                            quantity: item.quantity
+                        }))
+                    }
+                })
             }
         });
-        // 4. Descontar Inventario
+        if (voucherId) {
+            await db_1.default.voucher.update({ where: { id: voucherId }, data: { status: 'REDEEMED' } });
+        }
+        console.log(`✅ Canje guardado en DB: ${redemption.id}`);
+        // 6. Descontar Inventario
         const rewardItem = extraData?.reward;
         if (rewardItem) {
             try {
+                const whereInv = { projectId, itemName: rewardItem };
+                if (visit.pointId) {
+                    whereInv.pointId = visit.pointId;
+                }
+                else if (visit.marketId) {
+                    whereInv.marketId = visit.marketId;
+                }
+                else {
+                    whereInv.userId = visit.userId;
+                }
                 await db_1.default.inventory.updateMany({
-                    where: {
-                        userId: visit.userId,
-                        projectId,
-                        itemName: rewardItem
-                    },
-                    data: {
-                        stock: { decrement: 1 }
-                    }
+                    where: whereInv,
+                    data: { stock: { decrement: 1 } }
                 });
-                console.log(`✅ Stock descontado para ${rewardItem} (User: ${visit.userId})`);
+                console.log(`✅ Stock descontado para: ${rewardItem}`);
             }
             catch (invErr) {
                 console.error('⚠️ Error descontando inventario:', invErr);
-                // No bloqueamos el canje si falla el stock, pero avisamos en logs
+            }
+        }
+        // 7. Marcar Ubicación del Canje (PostGIS)
+        if (coords && coords.lat && coords.lng) {
+            try {
+                const lat = parseFloat(coords.lat);
+                const lng = parseFloat(coords.lng);
+                await db_1.default.$executeRaw `
+          UPDATE "Redemption" 
+          SET location = ST_SetSRID(ST_MakePoint(${lng}, ${lat}), 4326) 
+          WHERE id = ${redemption.id}
+        `;
+                console.log(`✅ Coordenadas guardadas para canje: ${redemption.id}`);
+            }
+            catch (geoErr) {
+                console.error('⚠️ Error guardando coordenadas:', geoErr);
             }
         }
         res.json({ success: true, redemptionId: redemption.id });
     }
     catch (error) {
         console.error('❌ Error en Canje:', error);
-        res.status(500).json({ message: 'Error interno en canje', detail: error.message });
+        // Si el error es de Drive, dar un mensaje claro al usuario
+        if (error.message?.includes('drive') || error.message?.includes('googleapis') || error.code === 403) {
+            return res.status(503).json({
+                message: 'No se pudo subir la evidencia fotográfica a Google Drive. Verifica tu conexión a internet e inténtalo de nuevo.',
+                detail: error.message
+            });
+        }
+        res.status(500).json({ message: 'Error interno al registrar el canje', detail: error.message });
     }
 };
 exports.createRedemption = createRedemption;
@@ -108,3 +170,30 @@ const getHistory = async (req, res) => {
     }
 };
 exports.getHistory = getHistory;
+const checkDniLimit = async (req, res) => {
+    try {
+        const { dni, projectId } = req.query;
+        if (!dni || !projectId)
+            return res.status(400).json({ message: 'Faltan parámetros' });
+        const project = await db_1.default.project.findUnique({ where: { id: projectId } });
+        if (!project)
+            return res.status(404).json({ message: 'Proyecto no encontrado' });
+        const maxPerDni = project.config?.max_redemptions_per_dni;
+        if (maxPerDni && maxPerDni > 0) {
+            const redemptionCount = await db_1.default.redemption.count({
+                where: { dni: dni, projectId: projectId }
+            });
+            if (redemptionCount >= maxPerDni) {
+                return res.json({
+                    allowed: false,
+                    message: `Límite alcanzado: Este DNI ya cuenta con ${redemptionCount} canjes en esta campaña y el máximo permitido es ${maxPerDni}.`
+                });
+            }
+        }
+        return res.json({ allowed: true });
+    }
+    catch (err) {
+        res.status(500).json({ message: 'Error validando DNI', detail: err.message });
+    }
+};
+exports.checkDniLimit = checkDniLimit;

@@ -1,0 +1,100 @@
+btl_backend  | [6:15:32 PM] GET /api/admin/inventory?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:15:32 PM] GET /api/admin/points?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:15:36 PM] DELETE /api/admin/inventory/03864494-dae7-41c4-8a82-3d71bb5a0ca3
+btl_backend  | [6:15:36 PM] GET /api/admin/inventory?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:15:36 PM] GET /api/admin/markets?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:15:36 PM] GET /api/admin/points?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:15:40 PM] DELETE /api/admin/inventory/3039cbf4-5517-49cf-a7a1-e936b1d1c5ee
+btl_backend  | [6:15:40 PM] GET /api/admin/points?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:15:40 PM] GET /api/admin/markets?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:15:40 PM] GET /api/admin/inventory?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:15:43 PM] DELETE /api/admin/inventory/4f996c44-4a42-4872-89f9-f97ccbd3293f
+btl_backend  | [6:15:43 PM] GET /api/admin/markets?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:15:43 PM] GET /api/admin/inventory?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:15:43 PM] GET /api/admin/points?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:15:45 PM] GET /api/admin/markets?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:15:45 PM] GET /api/admin/points?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:15:47 PM] GET /api/admin/staff?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:15:48 PM] GET /api/admin/markets?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:15:48 PM] GET /api/admin/points?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:15:50 PM] GET /api/admin/projects
+btl_backend  | [6:15:52 PM] GET /api/admin/projects
+btl_backend  | [6:16:14 PM] DELETE /api/admin/projects/mock-project-id
+btl_backend  | [6:16:14 PM] GET /api/admin/projects
+btl_backend  | [6:18:11 PM] GET /api/admin/staff?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:18:12 PM] GET /api/admin/markets?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:18:12 PM] GET /api/admin/points?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:18:47 PM] POST /api/admin/markets
+btl_backend  | [6:18:48 PM] GET /api/admin/markets?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:18:48 PM] GET /api/admin/points?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:19:07 PM] GET /api/admin/inventory?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:19:07 PM] GET /api/admin/markets?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:19:07 PM] GET /api/admin/points?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:19:27 PM] POST /api/admin/inventory/assign
+btl_backend  | [6:19:27 PM] GET /api/admin/inventory?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:19:27 PM] GET /api/admin/markets?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:19:27 PM] GET /api/admin/points?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:20:58 PM] POST /api/admin/inventory/assign
+btl_backend  | [6:20:58 PM] GET /api/admin/inventory?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:20:58 PM] GET /api/admin/markets?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:20:58 PM] GET /api/admin/points?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:21:16 PM] POST /api/admin/inventory/assign
+btl_backend  | [6:21:16 PM] GET /api/admin/inventory?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:21:16 PM] GET /api/admin/points?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:21:16 PM] GET /api/admin/markets?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:21:19 PM] GET /api/admin/visits?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:21:21 PM] GET /api/admin/markets?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:21:21 PM] GET /api/admin/points?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:21:24 PM] GET /api/admin/staff?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:21:30 PM] GET /api/visits/get-active?userId=8fd2fc62-6d19-44cb-ad63-8391fe363824
+btl_backend  | [6:21:31 PM] GET /api/admin/points?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:21:31 PM] GET /api/admin/markets?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:21:47 PM] POST /api/visits/start
+btl_backend  | [START_VISIT] Intentando iniciar para User:8fd2fc62-6d19-44cb-ad63-8391fe363824 en Point:undefined Market:7d376d1f-d4e2-4f6c-843c-d116c3b1ba75
+btl_backend  | 🔄 Subiendo foto a Google Drive...
+btl_backend  | Error en uploadImage Drive: Cannot read properties of undefined (reading 'files')
+btl_backend  | ❌ Error fatal en Google Drive: Cannot read properties of undefined (reading 'files')
+btl_backend  | [6:21:50 PM] GET /api/visits/get-active?userId=8fd2fc62-6d19-44cb-ad63-8391fe363824
+btl_backend  | [6:21:50 PM] GET /api/admin/inventory?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc&userId=8fd2fc62-6d19-44cb-ad63-8391fe363824
+btl_backend  | [6:21:55 PM] POST /api/auth/login
+btl_backend  | Login attempt: { email: 'julian@purplebtl.com', passwordLength: 6 }
+btl_backend  | [6:21:56 PM] GET /api/visits/get-active?userId=8fd2fc62-6d19-44cb-ad63-8391fe363824
+btl_backend  | [6:21:56 PM] GET /api/admin/inventory?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc&userId=8fd2fc62-6d19-44cb-ad63-8391fe363824
+btl_backend  | [6:21:57 PM] GET /api/visits/get-active?userId=8fd2fc62-6d19-44cb-ad63-8391fe363824
+btl_backend  | [6:21:57 PM] GET /api/admin/points?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:21:57 PM] GET /api/admin/markets?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:22:08 PM] POST /api/visits/start
+btl_backend  | [START_VISIT] Intentando iniciar para User:8fd2fc62-6d19-44cb-ad63-8391fe363824 en Point:undefined Market:7d376d1f-d4e2-4f6c-843c-d116c3b1ba75
+btl_backend  | 🔄 Subiendo foto a Google Drive...
+btl_backend  | Error en uploadImage Drive: Cannot read properties of undefined (reading 'files')
+btl_backend  | ❌ Error fatal en Google Drive: Cannot read properties of undefined (reading 'files')
+btl_backend  | [6:22:17 PM] POST /api/visits/start
+btl_backend  | [START_VISIT] Intentando iniciar para User:8fd2fc62-6d19-44cb-ad63-8391fe363824 en Point:undefined Market:7d376d1f-d4e2-4f6c-843c-d116c3b1ba75
+btl_backend  | 🔄 Subiendo foto a Google Drive...
+btl_backend  | Error en uploadImage Drive: Cannot read properties of undefined (reading 'files')
+btl_backend  | ❌ Error fatal en Google Drive: Cannot read properties of undefined (reading 'files')
+btl_backend  | [6:59:16 PM] GET /api/visits/get-active?userId=8fd2fc62-6d19-44cb-ad63-8391fe363824
+btl_backend  | [6:59:17 PM] GET /api/admin/points?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:59:17 PM] GET /api/admin/markets?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:59:28 PM] POST /api/visits/start
+btl_backend  | [START_VISIT] Intentando iniciar para User:8fd2fc62-6d19-44cb-ad63-8391fe363824 en Point:undefined Market:7d376d1f-d4e2-4f6c-843c-d116c3b1ba75
+btl_backend  | 🔄 Subiendo foto a Google Drive...
+btl_backend  | Error en uploadImage Drive: Cannot read properties of undefined (reading 'files')
+btl_backend  | ❌ Error fatal en Google Drive: Cannot read properties of undefined (reading 'files')
+btl_backend  | [6:59:32 PM] GET /api/visits/get-active?userId=8fd2fc62-6d19-44cb-ad63-8391fe363824
+btl_backend  | [6:59:32 PM] GET /api/admin/inventory?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc&userId=8fd2fc62-6d19-44cb-ad63-8391fe363824
+btl_backend  | [6:59:39 PM] GET /api/visits/get-active?userId=8fd2fc62-6d19-44cb-ad63-8391fe363824
+btl_backend  | [6:59:39 PM] GET /api/admin/inventory?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc&userId=8fd2fc62-6d19-44cb-ad63-8391fe363824
+btl_backend  | [6:59:43 PM] GET /api/visits/get-active?userId=8fd2fc62-6d19-44cb-ad63-8391fe363824
+btl_backend  | [6:59:44 PM] GET /api/admin/points?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [6:59:44 PM] GET /api/admin/markets?projectId=3bc7ea1c-50b3-4223-951f-25508f6128fc
+btl_backend  | [7:00:01 PM] POST /api/visits/start
+btl_backend  | [START_VISIT] Intentando iniciar para User:8fd2fc62-6d19-44cb-ad63-8391fe363824 en Point:undefined Market:7d376d1f-d4e2-4f6c-843c-d116c3b1ba75
+btl_backend  | 🔄 Subiendo foto a Google Drive...
+btl_backend  | Error en uploadImage Drive: Cannot read properties of undefined (reading 'files')
+btl_backend  | ❌ Error fatal en Google Drive: Cannot read properties of undefined (reading 'files')
+btl_backend  | [7:03:05 PM] POST /api/visits/start
+btl_backend  | [START_VISIT] Intentando iniciar para User:8fd2fc62-6d19-44cb-ad63-8391fe363824 en Point:undefined Market:7d376d1f-d4e2-4f6c-843c-d116c3b1ba75
+btl_backend  | 🔄 Subiendo foto a Google Drive...
+btl_backend  | Error en uploadImage Drive: Cannot read properties of undefined (reading 'files')
+btl_backend  | ❌ Error fatal en Google Drive: Cannot read properties of undefined (reading 'files')
