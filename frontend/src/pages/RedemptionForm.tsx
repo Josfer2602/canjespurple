@@ -176,7 +176,6 @@ const RedemptionForm: React.FC = () => {
   const isFormValid = projectConfig?.config?.requires_qr_validation ? !!verifiedVoucher : (
     (rules.some(r => r.type === 'BY_PRODUCTS') ? (selectedProduct && purchaseAmount) : purchaseAmount) && 
     consumerDni && 
-    (pdvMode === 'specific' || extraData['canal']) &&
     photoSlots.every((slot: any, idx: number) => !slot.required || photos[slot.key || `photo_${idx}`])
   );
 
@@ -402,26 +401,7 @@ const RedemptionForm: React.FC = () => {
                 </>
               )}
 
-              {/* Canal en modo General */}
-              {pdvMode === 'general' && (
-                <div className="space-y-2">
-                  <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">Tipo de Canal / Mercado</label>
-                  <select
-                    className="form-input h-12 font-bold text-sm appearance-none bg-slate-50 focus:border-brand-purple/40"
-                    value={extraData['canal'] || ''}
-                    onChange={(e) => handleExtraDataChange('canal', e.target.value)}
-                  >
-                    <option value="">Seleccione el canal...</option>
-                    <option value="Bodega">Bodega</option>
-                    <option value="Minimarket">Minimarket</option>
-                    <option value="Supermercado">Supermercado</option>
-                    <option value="Mercado">Mercado de Abastos</option>
-                    <option value="Mayorista">Mayorista</option>
-                    <option value="Farmacia">Farmacia / Botica</option>
-                    <option value="Otro">Otro</option>
-                  </select>
-                </div>
-              )}
+
 
               <div className="divider h-px bg-slate-100" />
 
