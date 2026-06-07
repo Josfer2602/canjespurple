@@ -12,7 +12,7 @@ export const getActiveVisit = async (req: Request, res: Response) => {
         endTime: null,
         isActive: true
       },
-      include: { point: true }
+      include: { point: true, market: true }
     });
 
     res.json(activeVisit);
@@ -39,11 +39,15 @@ export const endVisit = async (req: Request, res: Response) => {
   }
 };
 
-export const startVisit = async (req: Request, res: Response) => {
+  export const startVisit = async (req: Request, res: Response) => {
   try {
-    const { userId, pointId, facadePhoto, coords } = req.body;
+    const { userId, pointId, marketId, facadePhoto, coords } = req.body;
 
-    console.log(`[START_VISIT] Intentando iniciar para User:${userId} en Point:${pointId}`);
+    console.log(`[START_VISIT] Intentando iniciar para User:${userId} en Point:${pointId} Market:${marketId}`);
+
+    if (!pointId && !marketId) {
+      return res.status(400).json({ message: 'Se requiere pointId o marketId.' });
+    }
 
     // Check for active visit
     const activeVisit = await prisma.visit.findFirst({
@@ -55,15 +59,23 @@ export const startVisit = async (req: Request, res: Response) => {
     }
 
     const user = await prisma.user.findUnique({ where: { id: userId }, include: { project: true } });
-    const point = await prisma.point.findUnique({ where: { id: pointId } });
-
     if (!user) {
       console.warn('⚠️ Usuario no encontrado en la DB');
       return res.status(404).json({ message: 'Usuario no válido. ¿Hiciste login real?' });
     }
-    if (!point) {
-      console.warn('⚠️ Punto no encontrado en la DB');
-      return res.status(404).json({ message: 'Punto de venta no válido.' });
+
+    let point = null;
+    let market = null;
+    let pointFolderName = '';
+
+    if (pointId) {
+      point = await prisma.point.findUnique({ where: { id: pointId } });
+      if (!point) return res.status(404).json({ message: 'Punto de venta no válido.' });
+      pointFolderName = point.name;
+    } else if (marketId) {
+      market = await prisma.market.findUnique({ where: { id: marketId } });
+      if (!market) return res.status(404).json({ message: 'Mercado no válido.' });
+      pointFolderName = market.name;
     }
 
     // Subir foto de fachada a Drive con nueva estructura
@@ -77,7 +89,7 @@ export const startVisit = async (req: Request, res: Response) => {
       photoUrl = await driveService.uploadImage(
         facadePhoto,
         `${today}_Alta.jpg`,
-        [user.project!.name, point.name, today, altaFolder],
+        [user.project!.name, pointFolderName, today, altaFolder],
         driveRootId
       );
       console.log('✅ Foto subida con éxito:', photoUrl);
@@ -93,7 +105,8 @@ export const startVisit = async (req: Request, res: Response) => {
     const visit = await prisma.visit.create({
       data: {
         userId,
-        pointId,
+        pointId: pointId || null,
+        marketId: marketId || null,
         facadePhoto: photoUrl,
         isActive: true
       }

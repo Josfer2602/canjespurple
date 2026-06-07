@@ -55,6 +55,9 @@ model Market {
   createdAt    DateTime @default(now())
 
   points       Point[]
+  inventory    Inventory[]
+  visits       Visit[]
+  vouchers     Voucher[]
 }
 
 // 4. Puntos de Visita / PDV
@@ -78,6 +81,7 @@ model Point {
 
   visits       Visit[]
   vouchers     Voucher[]
+  inventory    Inventory[]
 }
 
 // 4. Catálogo de Productos
@@ -107,8 +111,12 @@ model RedemptionRule {
 // 5. Inventario
 model Inventory {
   id           String   @id @default(uuid())
-  userId       String
-  user         User     @relation(fields: [userId], references: [id])
+  userId       String?
+  user         User?    @relation(fields: [userId], references: [id])
+  marketId     String?
+  market       Market?  @relation(fields: [marketId], references: [id])
+  pointId      String?
+  point        Point?   @relation(fields: [pointId], references: [id])
   projectId    String
   project      Project  @relation(fields: [projectId], references: [id])
   itemName     String
@@ -124,8 +132,10 @@ model Visit {
   id           String   @id @default(uuid())
   userId       String
   user         User     @relation(fields: [userId], references: [id])
-  pointId      String
-  point        Point    @relation(fields: [pointId], references: [id])
+  marketId     String?
+  market       Market?  @relation(fields: [marketId], references: [id])
+  pointId      String?
+  point        Point?   @relation(fields: [pointId], references: [id])
   startTime    DateTime @default(now())
   endTime      DateTime?
   facadePhoto  String?
@@ -166,8 +176,10 @@ model Voucher {
   code         String   @unique
   projectId    String
   project      Project  @relation(fields: [projectId], references: [id])
-  pointId      String
-  point        Point    @relation(fields: [pointId], references: [id])
+  marketId     String?
+  market       Market?  @relation(fields: [marketId], references: [id])
+  pointId      String?
+  point        Point?   @relation(fields: [pointId], references: [id])
   dni          String
   phone        String?
   ticketNo     String

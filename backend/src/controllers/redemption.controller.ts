@@ -32,6 +32,7 @@ export const createRedemption = async (req: Request, res: Response) => {
       where: { id: visitId },
       include: { 
         point: true,
+        market: true,
         user: { include: { project: true } }
       }
     });
@@ -58,7 +59,7 @@ export const createRedemption = async (req: Request, res: Response) => {
       // 5. Subir fotos a Drive OBLIGATORIAMENTE
       const folderId = process.env.GOOGLE_DRIVE_FOLDER_ID!;
       const projectFolderName = visit.user.project?.name || 'Varios';
-      const pointFolderName = visit.point.name;
+      const pointFolderName = visit.point?.name || visit.market?.name || 'General';
       const today = new Date().toISOString().split('T')[0];
 
       console.log(`[DRIVE] Subiendo ${Object.keys(photos).length} foto(s) para DNI:${consumerDni}...`);
@@ -110,8 +111,16 @@ export const createRedemption = async (req: Request, res: Response) => {
     const rewardItem = extraData?.reward;
     if (rewardItem) {
       try {
+        const whereInv: any = { projectId, itemName: rewardItem };
+        if (visit.pointId) {
+          whereInv.pointId = visit.pointId;
+        } else if (visit.marketId) {
+          whereInv.marketId = visit.marketId;
+        } else {
+          whereInv.userId = visit.userId;
+        }
         await prisma.inventory.updateMany({
-          where: { userId: visit.userId, projectId, itemName: rewardItem },
+          where: whereInv,
           data: { stock: { decrement: 1 } }
         });
         console.log(`✅ Stock descontado para: ${rewardItem}`);

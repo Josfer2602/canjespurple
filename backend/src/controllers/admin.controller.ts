@@ -46,16 +46,21 @@ export const getStaff = async (req: Request, res: Response) => {
 // 2.1 Assign Stock to Staff
 export const assignStock = async (req: Request, res: Response) => {
   try {
-    const { userId, projectId, itemName, stockToAdd, threshold } = req.body;
+    const { userId, marketId, pointId, projectId, itemName, stockToAdd, threshold } = req.body;
     
-    if (!userId || !projectId || !itemName) {
-      return res.status(400).json({ message: 'UserId, ProjectId e ItemName son obligatorios' });
+    if ((!userId && !marketId && !pointId) || !projectId || !itemName) {
+      return res.status(400).json({ message: 'Se requiere UserId, MarketId o PointId, además de ProjectId e ItemName' });
     }
 
     const inventory = await prisma.$transaction(async (tx) => {
-      // Buscamos si ya existe el registro (activo o inactivo) para este canjista y producto
+      // Build where clause to find existing
+      const whereExisting: any = { projectId, itemName };
+      if (userId) whereExisting.userId = userId;
+      if (marketId) whereExisting.marketId = marketId;
+      if (pointId) whereExisting.pointId = pointId;
+
       const existing = await tx.inventory.findFirst({
-        where: { userId, projectId, itemName }
+        where: whereExisting
       });
 
       const updated = await tx.inventory.upsert({
@@ -65,10 +70,12 @@ export const assignStock = async (req: Request, res: Response) => {
         update: {
           stock: { increment: stockToAdd },
           threshold: threshold || 5,
-          isActive: true // Reactivamos si estaba desactivado
+          isActive: true
         },
         create: {
-          userId,
+          userId: userId || null,
+          marketId: marketId || null,
+          pointId: pointId || null,
           projectId,
           itemName,
           stock: stockToAdd,
@@ -77,7 +84,6 @@ export const assignStock = async (req: Request, res: Response) => {
         }
       });
 
-      // Crear el registro audit de stock
       await tx.inventoryLog.create({
         data: {
           inventoryId: updated.id,
@@ -366,22 +372,22 @@ export const createProject = async (req: Request, res: Response) => {
 
 export const getInventory = async (req: Request, res: Response) => {
   try {
-    const { projectId, userId } = req.query;
+    const { projectId, userId, marketId, pointId } = req.query;
     const whereClause: any = { 
       projectId: projectId as string,
       isActive: true 
     };
     
-    if (userId) {
-      whereClause.userId = userId as string;
-    }
+    if (userId) whereClause.userId = userId as string;
+    if (marketId) whereClause.marketId = marketId as string;
+    if (pointId) whereClause.pointId = pointId as string;
 
     const inventory = await prisma.inventory.findMany({
       where: whereClause,
       include: {
-        user: {
-          select: { fullName: true, email: true }
-        }
+        user: { select: { fullName: true, email: true } },
+        market: { select: { name: true } },
+        point: { select: { name: true } }
       },
       orderBy: { itemName: 'asc' }
     });

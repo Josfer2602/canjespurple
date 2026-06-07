@@ -7,6 +7,7 @@ import { processImage } from '../utils/image-processor';
 import toast from 'react-hot-toast';
 
 const VisitForm: React.FC = () => {
+  const [marketId, setMarketId] = useState('');
   const [pointId, setPointId] = useState('');
   const [coords, setCoords] = useState<{lat: number, lng: number} | null>(null);
   const [loadingGPS, setLoadingGPS] = useState(false);
@@ -14,18 +15,19 @@ const VisitForm: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [checkingVisit, setCheckingVisit] = useState(true);
   const [points, setPoints] = useState<any[]>([]);
+  const [markets, setMarkets] = useState<any[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const project = JSON.parse(localStorage.getItem('project') || '{}');
   const projectId = project.id || user.projectId;
+  const pdvMode = project.config?.pdv_mode || 'specific';
 
   const fetchData = async () => {
     try {
       setCheckingVisit(true);
       
-      // 1. Verificar visita activa
       const res = await api.get(`/visits/get-active?userId=${user.id}`);
       if (res.data) {
         toast.error('Ya tienes una visita activa.');
@@ -33,10 +35,15 @@ const VisitForm: React.FC = () => {
         return;
       }
 
-      // 2. Cargar puntos del proyecto
-      const endpoint = projectId ? `/admin/points?projectId=${projectId}` : `/admin/points`;
-      const pointsRes = await api.get(endpoint);
+      const pointsEndpoint = projectId ? `/admin/points?projectId=${projectId}` : `/admin/points`;
+      const marketsEndpoint = projectId ? `/admin/markets?projectId=${projectId}` : `/admin/markets`;
+      
+      const [pointsRes, marketsRes] = await Promise.all([
+        api.get(pointsEndpoint),
+        api.get(marketsEndpoint)
+      ]);
       setPoints(pointsRes.data);
+      setMarkets(marketsRes.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -80,13 +87,15 @@ const VisitForm: React.FC = () => {
     try {
       const response = await api.post('/visits/start', {
         userId: user.id,
-        pointId,
+        marketId: pdvMode === 'general' ? marketId : undefined,
+        pointId: pdvMode === 'specific' ? pointId : undefined,
         facadePhoto: photo,
         coords
       });
       
       localStorage.setItem('activeVisitId', response.data.visitId);
-      localStorage.setItem('activePointId', pointId);
+      if (pointId) localStorage.setItem('activePointId', pointId);
+      if (marketId) localStorage.setItem('activeMarketId', marketId);
 
       toast.success('¡Visita iniciada con éxito!');
       navigate('/staff');
@@ -98,7 +107,9 @@ const VisitForm: React.FC = () => {
     }
   };
 
-  const isFormValid = pointId && coords && photo;
+  const isFormValid = pdvMode === 'general' 
+    ? marketId && coords && photo 
+    : marketId && pointId && coords && photo;
 
   if (checkingVisit) {
     return (
@@ -121,12 +132,22 @@ const VisitForm: React.FC = () => {
 
         <div className="glass-card p-6 space-y-6">
           <div className="space-y-2">
-            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Punto de Canje Autorizado</label>
-            <select className="form-input bg-white border-slate-200" value={pointId} onChange={(e) => setPointId(e.target.value)}>
-              <option value="">Selecciona un punto...</option>
-              {points.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Mercado / Sede General</label>
+            <select className="form-input bg-white border-slate-200" value={marketId} onChange={(e) => { setMarketId(e.target.value); setPointId(''); }}>
+              <option value="">Selecciona un mercado...</option>
+              {markets.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
             </select>
           </div>
+
+          {pdvMode === 'specific' && marketId && (
+            <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Punto de Venta Específico</label>
+              <select className="form-input bg-white border-slate-200" value={pointId} onChange={(e) => setPointId(e.target.value)}>
+                <option value="">Selecciona un PDV...</option>
+                {points.filter(p => p.marketId === marketId).map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+            </div>
+          )}
 
           <div className="space-y-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1">Validación GPS</label>

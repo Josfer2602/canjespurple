@@ -106,7 +106,7 @@ export const getKpis = async (req: Request, res: Response) => {
     ] = await Promise.all([
       prisma.redemption.findMany({
         where: redemptionWhere,
-        include: { visit: { include: { point: true } } }
+        include: { visit: { include: { point: true, market: true } } }
       }),
       prisma.redemption.count({ where: todayWhere }),
       prisma.visit.count({ where: visitWhere }),
@@ -126,7 +126,7 @@ export const getKpis = async (req: Request, res: Response) => {
     // Top point by redemption count
     const pointCount: Record<string, number> = {};
     (redemptions as any[]).forEach((r: any) => {
-      const name = r.visit?.point?.name || 'N/A';
+      const name = r.visit?.point?.name || r.visit?.market?.name || 'N/A';
       pointCount[name] = (pointCount[name] || 0) + 1;
     });
     const topPoint = Object.entries(pointCount).sort((a, b) => b[1] - a[1])[0]?.[0] || '—';
@@ -135,7 +135,7 @@ export const getKpis = async (req: Request, res: Response) => {
     // Avg ticket per point
     const pointAmounts: Record<string, { total: number; count: number }> = {};
     (redemptions as any[]).forEach((r: any) => {
-      const name = r.visit?.point?.name || 'N/A';
+      const name = r.visit?.point?.name || r.visit?.market?.name || 'N/A';
       if (!pointAmounts[name]) pointAmounts[name] = { total: 0, count: 0 };
       pointAmounts[name].total += Number(r.amount || 0);
       pointAmounts[name].count += 1;
@@ -222,7 +222,8 @@ export const getRecentRedemptions = async (req: Request, res: Response) => {
         visit: {
           include: {
             user: { select: { fullName: true } },
-            point: { select: { name: true } }
+            point: { select: { name: true } },
+            market: { select: { name: true } }
           }
         }
       }
@@ -230,8 +231,8 @@ export const getRecentRedemptions = async (req: Request, res: Response) => {
 
     const formatted = redemptions.map(r => ({
       id: r.id,
-      point: { name: r.visit.point.name },
-      user: { fullName: r.visit.user.fullName },
+      point: { name: r.visit?.point?.name || r.visit?.market?.name || 'Desconocido' },
+      user: { fullName: r.visit?.user?.fullName || 'Desconocido' },
       purchaseAmount: Number(r.amount),
       reward: r.reward,
       createdAt: r.createdAt
@@ -297,14 +298,14 @@ export const getBreakdown = async (req: Request, res: Response) => {
         ...(dateFilter ? { createdAt: dateFilter } : {}),
         ...buildRedemptionRelationsFilter(req.query)
       },
-      include: { visit: { include: { point: true } } }
+      include: { visit: { include: { point: true, market: true } } }
     });
 
     const pointsCount: Record<string, number> = {};
     const rewardsCount: Record<string, number> = {};
 
     redemptions.forEach(r => {
-      const pName = r.visit?.point?.name || 'Desconocido';
+      const pName = r.visit?.point?.name || r.visit?.market?.name || 'Desconocido';
       pointsCount[pName] = (pointsCount[pName] || 0) + 1;
       const reward = r.reward || 'Sin Premio';
       rewardsCount[reward] = (rewardsCount[reward] || 0) + 1;

@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Package, AlertTriangle, Search, Loader2, User, RefreshCw, Plus, Trash2, Clock, History, Calendar } from 'lucide-react';
+import { Package, AlertTriangle, Search, Loader2, MapPin, Store, RefreshCw, Plus, Trash2, Clock, History, Calendar } from 'lucide-react';
 import AdminLayout from '../layouts/AdminLayout';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
@@ -7,7 +7,8 @@ import ConfirmModal from '../components/ConfirmModal';
 
 const AdminInventory: React.FC = () => {
   const [inventory, setInventory] = useState<any[]>([]);
-  const [staff, setStaff] = useState<any[]>([]);
+  const [markets, setMarkets] = useState<any[]>([]);
+  const [points, setPoints] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   
@@ -16,7 +17,9 @@ const AdminInventory: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [isQuickAdd, setIsQuickAdd] = useState(false);
   const [form, setForm] = useState({
-    userId: '',
+    assignTo: 'market', // 'market' or 'point'
+    marketId: '',
+    pointId: '',
     itemName: '',
     stockToAdd: 1,
     threshold: 5
@@ -36,12 +39,14 @@ const AdminInventory: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      const [invRes, staffRes] = await Promise.all([
+      const [invRes, marketRes, pointRes] = await Promise.all([
         api.get(`/admin/inventory?projectId=${project.id}`),
-        api.get(`/admin/staff?projectId=${project.id}`)
+        api.get(`/admin/markets?projectId=${project.id}`),
+        api.get(`/admin/points?projectId=${project.id}`)
       ]);
       setInventory(invRes.data);
-      setStaff(staffRes.data);
+      setMarkets(marketRes.data);
+      setPoints(pointRes.data);
     } catch (err) {
       console.error(err);
     } finally {
@@ -57,9 +62,18 @@ const AdminInventory: React.FC = () => {
     e.preventDefault();
     setSaving(true);
     try {
-      await api.post('/admin/inventory/assign', { ...form, projectId: project.id });
+      const payload: any = {
+        projectId: project.id,
+        itemName: form.itemName,
+        stockToAdd: form.stockToAdd,
+        threshold: form.threshold
+      };
+      if (form.assignTo === 'market') payload.marketId = form.marketId;
+      if (form.assignTo === 'point') payload.pointId = form.pointId;
+
+      await api.post('/admin/inventory/assign', payload);
       setShowModal(false);
-      setForm({ userId: '', itemName: '', stockToAdd: 1, threshold: 5 });
+      setForm({ assignTo: 'market', marketId: '', pointId: '', itemName: '', stockToAdd: 1, threshold: 5 });
       toast.success('Stock asignado correctamente');
       fetchData();
     } catch (err) {
@@ -98,10 +112,10 @@ const AdminInventory: React.FC = () => {
     }
   };
 
-  const filtered = inventory.filter(i =>
-    i.user.fullName.toLowerCase().includes(search.toLowerCase()) ||
-    i.itemName.toLowerCase().includes(search.toLowerCase())
-  );
+  const filtered = inventory.filter(i => {
+    const locName = i.market?.name || i.point?.name || i.user?.fullName || 'Sin Ubicación';
+    return locName.toLowerCase().includes(search.toLowerCase()) || i.itemName.toLowerCase().includes(search.toLowerCase());
+  });
 
   const lowStockCount = inventory.filter(i => i.stock <= i.threshold).length;
 
@@ -118,7 +132,7 @@ const AdminInventory: React.FC = () => {
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-300" size={16} />
               <input
                 type="text"
-                placeholder="Buscar producto o canjista..."
+                placeholder="Buscar producto o ubicación..."
                 className="pl-11 pr-6 py-3 bg-white border border-slate-100 rounded-2xl text-sm focus:ring-4 focus:ring-brand-purple/10 focus:border-brand-purple/40 outline-none w-64 shadow-sm font-bold placeholder:text-slate-300 transition-all"
                 value={search}
                 onChange={e => setSearch(e.target.value)}
@@ -128,7 +142,7 @@ const AdminInventory: React.FC = () => {
               <button
                 onClick={() => {
                   setIsQuickAdd(false);
-                  setForm({ userId: '', itemName: '', stockToAdd: 1, threshold: 5 });
+                  setForm({ assignTo: 'market', marketId: '', pointId: '', itemName: '', stockToAdd: 1, threshold: 5 });
                   setShowModal(true);
                 }}
                 className="px-6 py-3 bg-brand-teal text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-brand-teal/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2 border border-brand-teal"
@@ -171,7 +185,7 @@ const AdminInventory: React.FC = () => {
               <table className="w-full text-left border-collapse min-w-[800px]">
                 <thead>
                   <tr className="bg-slate-50/50">
-                    <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">Canjista / Responsable</th>
+                    <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">Ubicación / Punto</th>
                     <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">Ítem de Campaña</th>
                     <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">Stock Actual</th>
                     <th className="px-8 py-6 text-[10px] font-black text-slate-400 uppercase tracking-widest border-b border-slate-50">Status Operativo</th>
@@ -183,12 +197,16 @@ const AdminInventory: React.FC = () => {
                     <tr key={item.id} className="group hover:bg-slate-50/50 transition-all duration-300">
                       <td className="px-8 py-7 border-b border-slate-50">
                         <div className="flex items-center gap-4">
-                          <div className="w-12 h-12 bg-slate-50 rounded-2xl flex items-center justify-center text-slate-300 group-hover:bg-brand-purple group-hover:text-white transition-all duration-500 border border-slate-100">
-                            <User size={20} />
+                          <div className={`w-12 h-12 rounded-2xl flex items-center justify-center transition-all duration-500 border ${item.pointId ? 'bg-orange-50 text-orange-400 border-orange-100 group-hover:bg-orange-500 group-hover:text-white' : 'bg-blue-50 text-blue-400 border-blue-100 group-hover:bg-blue-500 group-hover:text-white'}`}>
+                            {item.pointId ? <Store size={20} /> : <MapPin size={20} />}
                           </div>
                           <div>
-                            <p className="font-black text-slate-800 uppercase tracking-tighter text-sm italic">{item.user.fullName}</p>
-                            <p className="text-[10px] text-slate-400 font-bold tracking-tight lowercase">{item.user.email}</p>
+                            <p className="font-black text-slate-800 uppercase tracking-tighter text-sm italic">
+                              {item.point?.name || item.market?.name || item.user?.fullName || 'Desconocido'}
+                            </p>
+                            <p className="text-[10px] text-slate-400 font-bold tracking-tight uppercase">
+                              {item.pointId ? 'Punto de Venta (PDV)' : (item.marketId ? 'Mercado General' : 'Asignación Personal')}
+                            </p>
                           </div>
                         </div>
                       </td>
@@ -227,7 +245,9 @@ const AdminInventory: React.FC = () => {
                               onClick={() => {
                                  setIsQuickAdd(true);
                                  setForm({
-                                   userId: item.userId,
+                                   assignTo: item.pointId ? 'point' : 'market',
+                                   marketId: item.marketId || '',
+                                   pointId: item.pointId || '',
                                    itemName: item.itemName,
                                    stockToAdd: 1,
                                    threshold: item.threshold
@@ -294,13 +314,48 @@ const AdminInventory: React.FC = () => {
               </div>
 
               <form onSubmit={handleAssign} className="space-y-6">
-                <div className="space-y-2">
-                  <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 italic">Canjista Responsable</label>
-                  <select disabled={isQuickAdd} required className="form-input" value={form.userId} onChange={e => setForm({ ...form, userId: e.target.value })}>
-                    <option value="">Seleccionar responsable...</option>
-                    {staff.map(u => <option key={u.id} value={u.id}>{u.fullName}</option>)}
-                  </select>
-                </div>
+                {!isQuickAdd && (
+                  <div className="space-y-3">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 italic">Nivel de Asignación</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, assignTo: 'market', pointId: '' })}
+                        className={`py-3 rounded-2xl text-xs font-black uppercase tracking-widest border-2 transition-all ${form.assignTo === 'market' ? 'border-brand-purple bg-brand-purple/5 text-brand-purple' : 'border-slate-100 text-slate-400 hover:bg-slate-50'}`}
+                      >
+                        Mercado General
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setForm({ ...form, assignTo: 'point', marketId: '' })}
+                        className={`py-3 rounded-2xl text-xs font-black uppercase tracking-widest border-2 transition-all ${form.assignTo === 'point' ? 'border-brand-purple bg-brand-purple/5 text-brand-purple' : 'border-slate-100 text-slate-400 hover:bg-slate-50'}`}
+                      >
+                        Punto de Venta (PDV)
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {form.assignTo === 'market' && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 italic">Mercado General</label>
+                    <select disabled={isQuickAdd} required className="form-input disabled:bg-slate-50" value={form.marketId} onChange={e => setForm({ ...form, marketId: e.target.value })}>
+                      <option value="">Seleccionar mercado...</option>
+                      {markets.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
+                    </select>
+                  </div>
+                )}
+
+                {form.assignTo === 'point' && (
+                  <div className="space-y-2">
+                    <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 italic">Punto de Venta Específico</label>
+                    <select disabled={isQuickAdd} required className="form-input disabled:bg-slate-50" value={form.pointId} onChange={e => setForm({ ...form, pointId: e.target.value })}>
+                      <option value="">Seleccionar PDV...</option>
+                      {points.map(p => <option key={p.id} value={p.id}>{p.name} {p.market ? `(${p.market.name})` : ''}</option>)}
+                    </select>
+                  </div>
+                )}
+
                 <div className="space-y-2">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 italic">Ítem de Campaña</label>
                   <input disabled={isQuickAdd} required type="text" className="form-input disabled:bg-slate-50 disabled:text-slate-400" placeholder="Ej: Polo BTL Talla M" value={form.itemName} onChange={e => setForm({ ...form, itemName: e.target.value })} />

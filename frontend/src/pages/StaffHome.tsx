@@ -41,10 +41,7 @@ const HomePageStaff: React.FC = () => {
   const fetchData = async () => {
     try {
       setLoading(true);
-      // Pide inventario personal al backend
-      const invRes = await api.get(`/admin/inventory?projectId=${project.id}&userId=${user.id}`);
-      setStock(invRes.data);
-
+      
       // Pide el punto o "visita" activa actualmente
       const visitRes = await api.get(`/visits/get-active?userId=${user.id}`);
       setActiveVisit(visitRes.data);
@@ -52,12 +49,24 @@ const HomePageStaff: React.FC = () => {
       // Si el backend nos responde con un punto activo, guardamos los IDs globales para otros procesos
       if (visitRes.data) {
         localStorage.setItem('activeVisitId', visitRes.data.id);
-        localStorage.setItem('activePointId', visitRes.data.pointId);
+        if (visitRes.data.pointId) localStorage.setItem('activePointId', visitRes.data.pointId);
+        if (visitRes.data.marketId) localStorage.setItem('activeMarketId', visitRes.data.marketId);
       } else {
         // Si no hay visita activa, nos aseguramos de borrar rastros
         localStorage.removeItem('activeVisitId');
         localStorage.removeItem('activePointId');
+        localStorage.removeItem('activeMarketId');
       }
+
+      // Pide inventario basado en la ubicación de la visita (o al usuario por defecto)
+      let invQuery = `projectId=${project.id}`;
+      if (visitRes.data?.pointId) invQuery += `&pointId=${visitRes.data.pointId}`;
+      else if (visitRes.data?.marketId) invQuery += `&marketId=${visitRes.data.marketId}`;
+      else invQuery += `&userId=${user.id}`;
+
+      const invRes = await api.get(`/admin/inventory?${invQuery}`);
+      setStock(invRes.data);
+
     } catch (err) {
       console.error("Error fetching staff data:", err);
     } finally {
