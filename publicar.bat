@@ -17,7 +17,7 @@ echo.
 
 echo [3/3] Conectando al servidor y actualizando la app...
 echo (Se te podria pedir la contrasena de tu servidor)
-ssh root@178.156.196.20 "cd /root/app-de-canjes && bash deploy.sh"
+ssh root@178.156.196.20 "cd /root/canjespurple && bash deploy.sh"
 
 echo.
 echo ===================================================
