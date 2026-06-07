@@ -7,9 +7,9 @@ echo "📥 Descargando últimos cambios..."
 git fetch --all
 git reset --hard origin/main
 
-# 2. Reconstruir el frontend sin caché para evitar errores antiguos
-echo "🔨 Reconstruyendo el frontend limpiamente (esto tomará unos minutos)..."
-docker compose build --no-cache frontend
+# 2. Reconstruir los servicios sin caché para aplicar cambios de código
+echo "🔨 Reconstruyendo servicios (esto tomará unos minutos)..."
+docker compose build --no-cache frontend backend
 
 # 3. Levantar todos los contenedores
 echo "🐳 Levantando contenedores..."
