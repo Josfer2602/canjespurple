@@ -34,10 +34,9 @@ const VisitForm: React.FC = () => {
       }
 
       // 2. Cargar puntos del proyecto
-      if (projectId) {
-        const pointsRes = await api.get(`/admin/points?projectId=${projectId}`);
-        setPoints(pointsRes.data);
-      }
+      const endpoint = projectId ? `/admin/points?projectId=${projectId}` : `/admin/points`;
+      const pointsRes = await api.get(endpoint);
+      setPoints(pointsRes.data);
     } catch (err) {
       console.error(err);
     } finally {

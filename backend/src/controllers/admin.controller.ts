@@ -182,8 +182,12 @@ export const createStaff = async (req: Request, res: Response) => {
 export const getPoints = async (req: Request, res: Response) => {
   try {
     const { projectId } = req.query;
+    const whereClause: any = {};
+    if (projectId && projectId !== 'undefined' && projectId !== 'null') {
+      whereClause.projectId = projectId as string;
+    }
     const points = await prisma.point.findMany({
-      where: { projectId: projectId as string },
+      where: whereClause,
       orderBy: { name: 'asc' }
     });
     res.json(points);
