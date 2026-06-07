@@ -89,7 +89,7 @@ export const endVisit = async (req: Request, res: Response) => {
       photoUrl = await driveService.uploadImage(
         facadePhoto,
         `${today}_Alta.jpg`,
-        [user.project!.name, pointFolderName, today, altaFolder],
+        [user.project?.name || 'General', pointFolderName || 'Desconocido', today, altaFolder],
         driveRootId
       );
       console.log('✅ Foto subida con éxito:', photoUrl);

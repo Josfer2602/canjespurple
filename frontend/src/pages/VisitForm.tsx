@@ -87,7 +87,7 @@ const VisitForm: React.FC = () => {
     try {
       const response = await api.post('/visits/start', {
         userId: user.id,
-        marketId: pdvMode === 'general' ? marketId : undefined,
+        marketId: marketId,
         pointId: pdvMode === 'specific' ? pointId : undefined,
         facadePhoto: photo,
         coords
@@ -99,9 +99,9 @@ const VisitForm: React.FC = () => {
 
       toast.success('¡Visita iniciada con éxito!');
       navigate('/staff');
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      toast.error('Error al iniciar visita.');
+      toast.error(err.response?.data?.message || 'Error al iniciar visita.');
     } finally {
       setSubmitting(false);
     }
