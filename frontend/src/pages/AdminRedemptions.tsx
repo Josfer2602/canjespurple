@@ -6,6 +6,18 @@ import ConfirmModal from '../components/ConfirmModal';
 import toast from 'react-hot-toast';
 import { Check, X as XIcon, Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 
+const getDirectImgUrl = (url: string) => {
+  if (!url) return '';
+  const driveRegex = /file\/d\/([^\/]+)/;
+  const ucRegex = /id=([^&]+)/;
+  const id = url.match(driveRegex)?.[1] || url.match(ucRegex)?.[1];
+  
+  if (id) {
+    return `${api.defaults.baseURL}/vouchers/photo/${id}`;
+  }
+  return url;
+};
+
 const AdminRedemptions: React.FC = () => {
   const [redemptions, setRedemptions] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -415,7 +427,7 @@ const AdminRedemptions: React.FC = () => {
               
               <div className="relative w-full h-full flex items-center justify-center">
                 <img 
-                  src={photoModal.photos[photoModal.index]} 
+                  src={getDirectImgUrl(photoModal.photos[photoModal.index])} 
                   alt="Evidencia" 
                   className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
                 />
