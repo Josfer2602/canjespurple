@@ -23,6 +23,7 @@ const AdminProjectConfig: React.FC = () => {
   const [startDate, setStartDate] = useState(project.config?.start_date || '');
   const [endDate, setEndDate] = useState(project.config?.end_date || '');
   const [heatmapLevel, setHeatmapLevel] = useState<'city' | 'district'>(project.config?.heatmap_level || 'city');
+  const [mapGeojsonUrl, setMapGeojsonUrl] = useState(project.config?.map_geojson_url || '');
 
   // New Flujo Antifraude & Whitelabeling
   const [isTriangulationActive, setIsTriangulationActive] = useState(!!project.config?.is_triangulation_active);
@@ -81,6 +82,7 @@ const AdminProjectConfig: React.FC = () => {
         start_date: startDate,
         end_date: endDate,
         heatmap_level: heatmapLevel,
+        map_geojson_url: mapGeojsonUrl,
         is_triangulation_active: isTriangulationActive,
         triangulation_mode: triangulationMode,
         ticket_config: { fields: ticketFields },
@@ -324,6 +326,20 @@ const AdminProjectConfig: React.FC = () => {
                       </p>
                     </div>
                   )}
+                </div>
+
+                <div className="border border-slate-100 rounded-2xl p-5 mb-2">
+                  <h4 className="text-sm font-black text-slate-700 uppercase tracking-tight mb-1">URL de Fronteras (GeoJSON) - Opcional</h4>
+                  <p className="text-[10px] text-slate-400 font-bold mb-4 leading-relaxed">
+                    Si pegas un link a un archivo .geojson, el Dashboard cambiará automáticamente a un "Mapa Coroplético" (por polígonos/distritos) usando estas fronteras.
+                  </p>
+                  <input 
+                    type="url" 
+                    placeholder="https://.../mis-distritos.geojson"
+                    className="w-full bg-slate-50 border border-slate-100 rounded-2xl px-5 py-3 text-sm font-bold focus:ring-2 focus:ring-brand-purple outline-none transition-all" 
+                    value={mapGeojsonUrl} 
+                    onChange={e => setMapGeojsonUrl(e.target.value)} 
+                  />
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

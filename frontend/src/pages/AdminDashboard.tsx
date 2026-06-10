@@ -12,6 +12,7 @@ import api from '../utils/api';
 import AdminLayout from '../layouts/AdminLayout';
 import { MapContainer, TileLayer } from 'react-leaflet';
 import GeoHeatmapLayer from '../components/GeoHeatmapLayer';
+import ChoroplethLayer from '../components/ChoroplethLayer';
 import 'leaflet/dist/leaflet.css';
 
 const COLORS = ['#6b0096', '#00bcd4', '#5a0080', '#0097a7', '#4a0069'];
@@ -149,6 +150,7 @@ const AdminDashboard: React.FC = () => {
   }, [quickRange, customFrom, customTo, selectedMarket, selectedPoint, selectedUser]);
 
   const heatmapLevel = project.config?.heatmap_level || 'city';
+  const mapGeojsonUrl = project.config?.map_geojson_url;
   const defaultZoom = heatmapLevel === 'city' ? 12 : 15;
   const defaultCenter = { lat: -12.0464, lng: -77.0428 }; // Lima
   const mapCenter = geoHeatmap.length > 0
@@ -540,7 +542,9 @@ const AdminDashboard: React.FC = () => {
               <MapPin size={20} className="text-brand-purple" />
               Concentración Geográfica de Canjes
             </h3>
-            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">Ubicación física de registros en el período seleccionado (Vista: {heatmapLevel})</p>
+            <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mt-1">
+              Ubicación física de registros en el período seleccionado {mapGeojsonUrl ? '(Mapa Coroplético)' : `(Vista: ${heatmapLevel})`}
+            </p>
           </div>
           <div className="w-full h-[450px] rounded-[1.5rem] overflow-hidden border border-slate-200 shadow-inner relative z-0">
             {geoHeatmap.length > 0 ? (
@@ -553,11 +557,15 @@ const AdminDashboard: React.FC = () => {
                   url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
                   attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
                 />
-                <GeoHeatmapLayer 
-                  points={geoHeatmap} 
-                  radius={heatmapLevel === 'city' ? 25 : 35} 
-                  blur={15} 
-                />
+                {mapGeojsonUrl ? (
+                  <ChoroplethLayer geojsonUrl={mapGeojsonUrl} points={geoHeatmap} />
+                ) : (
+                  <GeoHeatmapLayer 
+                    points={geoHeatmap} 
+                    radius={heatmapLevel === 'city' ? 25 : 35} 
+                    blur={15} 
+                  />
+                )}
               </MapContainer>
             ) : (
               <div className="h-full flex items-center justify-center bg-slate-50 text-slate-300 text-xs font-black uppercase italic tracking-widest">
