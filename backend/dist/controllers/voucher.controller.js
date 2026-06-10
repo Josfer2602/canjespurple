@@ -129,7 +129,7 @@ const approveVoucher = async (req, res) => {
 exports.approveVoucher = approveVoucher;
 const verifyVoucherCode = async (req, res) => {
     try {
-        const { code, projectId } = req.query;
+        const { code, projectId, mode } = req.query;
         if (!code)
             return res.status(400).json({ message: 'Falta el código de voucher.' });
         const voucher = await db_1.default.voucher.findFirst({
@@ -141,8 +141,9 @@ const verifyVoucherCode = async (req, res) => {
         });
         if (!voucher)
             return res.status(404).json({ message: 'Código no encontrado o inválido.' });
-        if (voucher.status === 'PENDING')
+        if (mode !== 'b2b2c_mixed' && voucher.status === 'PENDING') {
             return res.status(400).json({ message: 'Este código aún no ha sido aprobado por el Punto de Venta.' });
+        }
         if (voucher.status === 'REJECTED')
             return res.status(400).json({ message: 'Este código fue RECHAZADO por el Punto de Venta.' });
         if (voucher.status === 'REDEEMED')

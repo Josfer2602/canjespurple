@@ -50,10 +50,20 @@ const RedemptionForm: React.FC = () => {
 
   const availableProducts = Array.from(new Set(rules.filter(r => r.type === 'BY_PRODUCTS').map(r => r.productCriteria?.productName).filter(Boolean)));
 
-  const photoSlots = projectConfig?.config?.photo_slots || [];
+  const photoSlots = [...(projectConfig?.config?.photo_slots || [])];
   const dynamicFields = projectConfig?.config?.extra_fields || [];
   const unit = projectConfig?.config?.redemption_unit || 'amount';
   const pdvMode = projectConfig?.config?.pdv_mode || 'specific';
+  
+  const triangulationMode = projectConfig?.config?.triangulation_mode || (projectConfig?.config?.requires_qr_validation ? 'b2b2c_digital' : 'physical');
+
+  // Inject dynamic photo slots based on triangulation mode
+  if (triangulationMode === 'b2b2c_mixed' && !photoSlots.find(p => p.key === 'signed_receipt')) {
+    photoSlots.push({ label: 'Comprobante Firmado por PDV', key: 'signed_receipt', required: true });
+  }
+  if (triangulationMode === 'physical' && !photoSlots.find(p => p.key === 'physical_ticket')) {
+    photoSlots.push({ label: 'Ticket Físico del PDV', key: 'physical_ticket', required: true });
+  }
 
   useEffect(() => {
     let amount = parseFloat(purchaseAmount);
@@ -130,10 +140,12 @@ const RedemptionForm: React.FC = () => {
         return;
       }
 
-      if (projectConfig?.config?.requires_qr_validation && !verifiedVoucher) {
-        toast.error('Debes verificar un código de voucher válido primero.');
-        setSubmitting(false);
-        return;
+      if (triangulationMode === 'b2b2c_digital' || triangulationMode === 'b2b2c_mixed') {
+        if (!verifiedVoucher) {
+          toast.error('Debes verificar un código de voucher válido primero.');
+          setSubmitting(false);
+          return;
+        }
       }
 
       // 1. Obtener GPS exacto usando Promesa para esperar al satélite
@@ -154,11 +166,11 @@ const RedemptionForm: React.FC = () => {
         userId: user.id,
         pointId,
         visitId,
-        ticketNumber: projectConfig?.config?.requires_qr_validation ? verifiedVoucher.ticketNo : '',
-        purchaseAmount: projectConfig?.config?.requires_qr_validation ? parseFloat(verifiedVoucher.amount) : parseFloat(purchaseAmount),
-        consumerDni: projectConfig?.config?.requires_qr_validation ? verifiedVoucher.dni : consumerDni,
+        ticketNumber: (triangulationMode === 'b2b2c_digital' || triangulationMode === 'b2b2c_mixed') ? verifiedVoucher.ticketNo : '',
+        purchaseAmount: (triangulationMode === 'b2b2c_digital' || triangulationMode === 'b2b2c_mixed') ? parseFloat(verifiedVoucher.amount) : parseFloat(purchaseAmount),
+        consumerDni: (triangulationMode === 'b2b2c_digital' || triangulationMode === 'b2b2c_mixed') ? verifiedVoucher.dni : consumerDni,
         photos, 
-        extraData: { ...extraData, source: projectConfig?.config?.requires_qr_validation ? 'voucher_b2b2c' : 'app_v2' },
+        extraData: { ...extraData, source: (triangulationMode === 'b2b2c_digital' || triangulationMode === 'b2b2c_mixed') ? 'voucher_b2b2c' : 'app_v2' },
         coords,
         voucherId: verifiedVoucher?.id,
         items: rules.some(r => r.type === 'BY_PRODUCTS') && selectedProduct ? [{ productName: selectedProduct, quantity: parseFloat(purchaseAmount) }] : []
@@ -173,7 +185,7 @@ const RedemptionForm: React.FC = () => {
     }
   };
 
-  const isFormValid = projectConfig?.config?.requires_qr_validation ? !!verifiedVoucher : (
+  const isFormValid = (triangulationMode === 'b2b2c_digital' || triangulationMode === 'b2b2c_mixed') ? (!!verifiedVoucher && photoSlots.every((slot: any, idx: number) => !slot.required || photos[slot.key || `photo_${idx}`])) : (
     (rules.some(r => r.type === 'BY_PRODUCTS') ? (selectedProduct && purchaseAmount) : purchaseAmount) && 
     consumerDni && 
     photoSlots.every((slot: any, idx: number) => !slot.required || photos[slot.key || `photo_${idx}`])
@@ -183,7 +195,7 @@ const RedemptionForm: React.FC = () => {
     if (!voucherCode) return;
     setVerifyingCode(true);
     try {
-      const res = await api.get(`/vouchers/verify?code=${voucherCode}&projectId=${project.id || user.projectId}`);
+      const res = await api.get(`/vouchers/verify?code=${voucherCode}&projectId=${project.id || user.projectId}&mode=${triangulationMode}`);
       setVerifiedVoucher(res.data);
       setPurchaseAmount(res.data.amount); // Triggers matching algorithm
       toast.success('Código verificado correctamente.');
@@ -221,10 +233,10 @@ const RedemptionForm: React.FC = () => {
                 <p className="text-xs text-slate-500 font-medium px-4">Ingresa el DNI del cliente para comenzar el registro.</p>
               </div>
 
-              {projectConfig?.config?.requires_qr_validation ? (
+              {(triangulationMode === 'b2b2c_digital' || triangulationMode === 'b2b2c_mixed') ? (
                 <div className="space-y-4">
                   <div className="space-y-2">
-                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">Código del Voucher</label>
+                    <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">Código del Voucher del Cliente</label>
                     <div className="relative">
                       <input 
                         type="text" 

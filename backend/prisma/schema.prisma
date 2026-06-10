@@ -52,6 +52,8 @@ model Market {
   name         String
   number       String?  // Ej: "N° 2", "Central"
   address      String?
+  requiresApproval Boolean @default(false)
+  approvalLimit    Decimal? @db.Decimal(10, 2)
   createdAt    DateTime @default(now())
 
   points       Point[]
@@ -159,6 +161,7 @@ model Redemption {
   extraData    Json     @default("{}")
   photos       Json     @default("[]")
   location     Unsupported("geography(Point, 4326)")?
+  status       String   @default("APPROVED") // APPROVED, PENDING, REJECTED
   
   voucherId    String?  @unique
   voucher      Voucher? @relation(fields: [voucherId], references: [id])

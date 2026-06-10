@@ -12,6 +12,7 @@ const visit_routes_1 = __importDefault(require("./routes/visit.routes"));
 const analytics_routes_1 = __importDefault(require("./routes/analytics.routes"));
 const admin_routes_1 = __importDefault(require("./routes/admin.routes"));
 const voucher_routes_1 = __importDefault(require("./routes/voucher.routes"));
+const import_routes_1 = __importDefault(require("./routes/import.routes"));
 dotenv_1.default.config();
 const app = (0, express_1.default)();
 const PORT = process.env.PORT || 4000;
@@ -36,6 +37,7 @@ app.use('/api/visits', visit_routes_1.default);
 app.use('/api/analytics', analytics_routes_1.default);
 app.use('/api/admin', admin_routes_1.default);
 app.use('/api/vouchers', voucher_routes_1.default);
+app.use('/api/import', import_routes_1.default);
 // Health Check
 app.get('/api/health', (req, res) => {
     res.json({

@@ -25,7 +25,7 @@ const AdminPoints: React.FC = () => {
   const qrRef = useRef<HTMLDivElement>(null);
 
   // Forms
-  const [marketForm, setMarketForm] = useState({ name: '', number: '', address: '' });
+  const [marketForm, setMarketForm] = useState({ id: undefined as string | undefined, name: '', number: '', address: '', requiresApproval: false, approvalLimit: '' as string | number });
   const [pointForm, setPointForm] = useState({ name: '', address: '', ownerName: '', phone: '', marketId: '' });
 
   const project = JSON.parse(localStorage.getItem('project') || '{}');
@@ -56,10 +56,15 @@ const AdminPoints: React.FC = () => {
     e.preventDefault();
     setSavingMarket(true);
     try {
-      await api.post('/admin/markets', { ...marketForm, projectId: project.id });
+      if (marketForm.id) {
+        await api.put(`/admin/markets/${marketForm.id}`, { ...marketForm, projectId: project.id });
+        toast.success('Mercado actualizado');
+      } else {
+        await api.post('/admin/markets', { ...marketForm, projectId: project.id });
+        toast.success('Mercado creado con éxito');
+      }
       setShowMarketModal(false);
-      setMarketForm({ name: '', number: '', address: '' });
-      toast.success('Mercado creado con éxito');
+      setMarketForm({ id: undefined, name: '', number: '', address: '', requiresApproval: false, approvalLimit: '' });
       fetchData();
     } catch (err) {
       toast.error('Error creando mercado');
@@ -181,6 +186,19 @@ const AdminPoints: React.FC = () => {
     });
   };
 
+  const handleEditMarket = (e: React.MouseEvent, m: any) => {
+    e.stopPropagation();
+    setMarketForm({
+      id: m.id,
+      name: m.name,
+      number: m.number || '',
+      address: m.address || '',
+      requiresApproval: m.requiresApproval || false,
+      approvalLimit: m.approvalLimit || ''
+    });
+    setShowMarketModal(true);
+  };
+
   // ── PDV Card ───────────────────────────────────────────────────
   const PdvCard = ({ p, compact = false, showReassign = false }: { p: any, compact?: boolean, showReassign?: boolean }) => (
     <div className={`bg-white border border-slate-100 rounded-2xl p-4 hover:border-brand-purple/20 transition-all ${compact ? '' : 'shadow-sm'}`}>
@@ -264,7 +282,10 @@ const AdminPoints: React.FC = () => {
                 <Plus size={14} /> PDV
               </button>
             )}
-            <button onClick={() => setShowMarketModal(true)} className="px-6 py-3 bg-brand-teal text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-brand-teal/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2">
+            <button onClick={() => {
+                setMarketForm({ id: undefined, name: '', number: '', address: '', requiresApproval: false, approvalLimit: '' });
+                setShowMarketModal(true);
+              }} className="px-6 py-3 bg-brand-teal text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-brand-teal/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2">
               <Plus size={16} /> {pdvMode === 'general' ? 'Mercado' : 'Mercado'}
             </button>
           </div>
@@ -297,10 +318,14 @@ const AdminPoints: React.FC = () => {
                         {m.number && <span className="text-[10px] font-black text-brand-purple bg-brand-purple/5 px-2 py-0.5 rounded-md">N° {m.number}</span>}
                         {m.address && <span className="text-[10px] text-slate-400 font-bold flex items-center gap-1"><Map size={10}/>{m.address}</span>}
                         {pdvMode === 'specific' && <span className="text-[10px] text-slate-400 font-bold">{m.points?.length || 0} PDVs</span>}
+                        {m.requiresApproval && <span className="text-[10px] font-black text-amber-600 bg-amber-50 px-2 py-0.5 rounded-md border border-amber-200">Aprobación &gt; {m.approvalLimit}</span>}
                       </div>
                     </div>
                   </div>
                   <div className="flex items-center gap-2">
+                    <button onClick={(e) => handleEditMarket(e, m)} className="p-2 text-slate-200 hover:text-brand-purple transition-colors">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                    </button>
                     <button onClick={(e) => { e.stopPropagation(); setDeleteConfirm({ id: m.id, type: 'market' }); }} className="p-2 text-slate-200 hover:text-red-500 transition-colors">
                       <Trash2 size={16} />
                     </button>
@@ -365,11 +390,44 @@ const AdminPoints: React.FC = () => {
                     <input type="text" className="form-input" placeholder="Jr. Lima 123" value={marketForm.address} onChange={e => setMarketForm({...marketForm, address: e.target.value})} />
                   </div>
                 </div>
+                
+                <div className="p-4 bg-amber-50 border border-amber-100 rounded-2xl space-y-4">
+                  <label className="flex items-center gap-3 cursor-pointer">
+                    <input 
+                      type="checkbox" 
+                      className="w-5 h-5 rounded-lg border-amber-300 text-amber-500 focus:ring-amber-500" 
+                      checked={marketForm.requiresApproval} 
+                      onChange={e => setMarketForm({...marketForm, requiresApproval: e.target.checked})} 
+                    />
+                    <div>
+                      <p className="text-xs font-black text-amber-800 uppercase tracking-tight">Requiere Aprobación de Supervisor</p>
+                      <p className="text-[10px] text-amber-600/70">Los canjes que superen el límite quedarán como PENDIENTES hasta ser aprobados.</p>
+                    </div>
+                  </label>
+                  
+                  {marketForm.requiresApproval && (
+                    <div className="space-y-2 animate-in slide-in-from-top-2">
+                      <label className="text-[10px] font-black text-amber-700 uppercase tracking-widest ml-1 italic">
+                        Límite Permitido (S/ o Unidades)
+                      </label>
+                      <input 
+                        required 
+                        type="number" 
+                        step="0.01"
+                        className="form-input border-amber-200 focus:border-amber-400 focus:ring-amber-400/20" 
+                        placeholder="Ej: 50" 
+                        value={marketForm.approvalLimit} 
+                        onChange={e => setMarketForm({...marketForm, approvalLimit: e.target.value})} 
+                      />
+                    </div>
+                  )}
+                </div>
+
                 <div className="flex gap-4 pt-4">
                   <button type="button" onClick={() => setShowMarketModal(false)} className="flex-1 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all leading-none">Cancelar</button>
                   <button type="submit" disabled={savingMarket} className="flex-[2] bg-brand-teal text-white rounded-2xl font-black text-xs uppercase tracking-[0.2em] shadow-xl shadow-brand-teal/20 flex items-center justify-center gap-3 py-4 hover:brightness-110 active:scale-95 transition-all">
                     {savingMarket ? <Loader2 size={18} className="animate-spin" /> : <Plus size={18} />}
-                    Crear Mercado
+                    {marketForm.id ? 'Guardar Cambios' : 'Crear Mercado'}
                   </button>
                 </div>
               </form>

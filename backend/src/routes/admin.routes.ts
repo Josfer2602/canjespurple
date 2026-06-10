@@ -11,6 +11,7 @@ import {
   generatePdvAccess,
   getMarkets,
   createMarket,
+  updateMarket,
   deleteMarket,
   updateProjectConfig,
   getProjects,
@@ -27,6 +28,8 @@ import {
   getAdminRedemptions,
   updateRedemption,
   deleteRedemption,
+  approveRedemption,
+  rejectRedemption,
   getAdminVisits
 } from '../controllers/admin.controller';
 
@@ -47,6 +50,7 @@ router.post('/points/:id/access', generatePdvAccess);
 // Markets management
 router.get('/markets', getMarkets);
 router.post('/markets', createMarket);
+router.put('/markets/:id', updateMarket);
 router.delete('/markets/:id', deleteMarket);
 
 // Project management & Reset
@@ -74,6 +78,8 @@ router.delete('/rules/:id', deleteRule);
 router.get('/redemptions', getAdminRedemptions);
 router.put('/redemptions/:id', updateRedemption);
 router.delete('/redemptions/:id', deleteRedemption);
+router.post('/redemptions/:id/approve', approveRedemption);
+router.post('/redemptions/:id/reject', rejectRedemption);
 
 // Check-Ins & Visits
 router.get('/visits', getAdminVisits);

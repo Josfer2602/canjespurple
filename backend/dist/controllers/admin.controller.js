@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getAdminVisits = exports.deleteRedemption = exports.updateRedemption = exports.getAdminRedemptions = exports.deactivateInventory = exports.deleteRule = exports.updatePoint = exports.deletePoint = exports.deleteStaff = exports.deleteProject = exports.getInventory = exports.createProject = exports.getProjects = exports.getProject = exports.updateProjectConfig = exports.generatePdvAccess = exports.deleteMarket = exports.createMarket = exports.getMarkets = exports.createPoint = exports.getPoints = exports.createStaff = exports.saveRule = exports.getRules = exports.getInventoryLogs = exports.assignStock = exports.getStaff = exports.resetData = void 0;
+exports.getAdminVisits = exports.deleteRedemption = exports.updateRedemption = exports.rejectRedemption = exports.approveRedemption = exports.getAdminRedemptions = exports.deactivateInventory = exports.deleteRule = exports.updatePoint = exports.deletePoint = exports.deleteStaff = exports.deleteProject = exports.getInventory = exports.createProject = exports.getProjects = exports.getProject = exports.updateProjectConfig = exports.generatePdvAccess = exports.deleteMarket = exports.updateMarket = exports.createMarket = exports.getMarkets = exports.createPoint = exports.getPoints = exports.createStaff = exports.saveRule = exports.getRules = exports.getInventoryLogs = exports.assignStock = exports.getStaff = exports.resetData = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const db_1 = __importDefault(require("../config/db"));
 // 1. Reset System Data ( transactional cleanup )
@@ -232,11 +232,18 @@ const getMarkets = async (req, res) => {
 exports.getMarkets = getMarkets;
 const createMarket = async (req, res) => {
     try {
-        const { name, number, address, projectId } = req.body;
+        const { name, number, address, projectId, requiresApproval, approvalLimit } = req.body;
         // Generar código automático si no se envía
         const generatedNumber = number || `MK-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
         const market = await db_1.default.market.create({
-            data: { name, number: generatedNumber, address, projectId }
+            data: {
+                name,
+                number: generatedNumber,
+                address,
+                projectId,
+                requiresApproval: !!requiresApproval,
+                approvalLimit: approvalLimit ? parseFloat(approvalLimit) : null
+            }
         });
         res.json({ success: true, market });
     }
@@ -245,6 +252,27 @@ const createMarket = async (req, res) => {
     }
 };
 exports.createMarket = createMarket;
+const updateMarket = async (req, res) => {
+    const { id } = req.params;
+    try {
+        const { name, number, address, requiresApproval, approvalLimit } = req.body;
+        const market = await db_1.default.market.update({
+            where: { id },
+            data: {
+                name,
+                number,
+                address,
+                requiresApproval: !!requiresApproval,
+                approvalLimit: approvalLimit ? parseFloat(approvalLimit) : null
+            }
+        });
+        res.json({ success: true, market });
+    }
+    catch (error) {
+        res.status(500).json({ message: 'Error updating market', detail: error.message });
+    }
+};
+exports.updateMarket = updateMarket;
 const deleteMarket = async (req, res) => {
     const { id } = req.params;
     try {
@@ -520,15 +548,18 @@ const getAdminRedemptions = async (req, res) => {
         const { projectId } = req.query;
         const redemptions = await db_1.default.redemption.findMany({
             where: { projectId: projectId },
-            orderBy: { createdAt: 'desc' },
             include: {
                 visit: {
                     include: {
-                        user: { select: { fullName: true, email: true } },
-                        point: { select: { name: true } }
+                        user: { select: { fullName: true } },
+                        point: { select: { name: true } },
+                        market: { select: { name: true } }
                     }
-                }
-            }
+                },
+                items: true
+            },
+            orderBy: { createdAt: 'desc' },
+            take: 200
         });
         res.json(redemptions);
     }
@@ -537,6 +568,66 @@ const getAdminRedemptions = async (req, res) => {
     }
 };
 exports.getAdminRedemptions = getAdminRedemptions;
+const approveRedemption = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const redemption = await db_1.default.redemption.findUnique({
+            where: { id },
+            include: { visit: true }
+        });
+        if (!redemption || redemption.status !== 'PENDING') {
+            return res.status(400).json({ message: 'Canje no encontrado o no está pendiente.' });
+        }
+        // Actualizar estado a APPROVED
+        await db_1.default.redemption.update({
+            where: { id },
+            data: { status: 'APPROVED' }
+        });
+        // Descontar Inventario
+        const extraData = redemption.extraData;
+        const rewardItem = extraData?.reward;
+        if (rewardItem) {
+            try {
+                const whereInv = { projectId: redemption.projectId, itemName: rewardItem };
+                if (redemption.visit.pointId) {
+                    whereInv.pointId = redemption.visit.pointId;
+                }
+                else if (redemption.visit.marketId) {
+                    whereInv.marketId = redemption.visit.marketId;
+                }
+                else {
+                    whereInv.userId = redemption.visit.userId;
+                }
+                await db_1.default.inventory.updateMany({
+                    where: whereInv,
+                    data: { stock: { decrement: 1 } }
+                });
+            }
+            catch (invErr) {
+                console.error('⚠️ Error descontando inventario tras aprobación:', invErr);
+            }
+        }
+        res.json({ success: true, message: 'Canje aprobado y stock descontado.' });
+    }
+    catch (error) {
+        res.status(500).json({ message: 'Error aprobando canje', detail: error.message });
+    }
+};
+exports.approveRedemption = approveRedemption;
+const rejectRedemption = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await db_1.default.redemption.update({
+            where: { id },
+            data: { status: 'REJECTED' }
+        });
+        res.json({ success: true, message: 'Canje rechazado.' });
+    }
+    catch (error) {
+        res.status(500).json({ message: 'Error rechazando canje', detail: error.message });
+    }
+};
+exports.rejectRedemption = rejectRedemption;
 const updateRedemption = async (req, res) => {
     const { id } = req.params;
     const { amount, ticketNo, reward, extraData } = req.body;
@@ -608,13 +699,16 @@ const getAdminVisits = async (req, res) => {
         // In our schema, point has projectId.
         const visits = await db_1.default.visit.findMany({
             where: {
-                point: {
-                    projectId: projectId
-                }
+                OR: [
+                    { point: { projectId: projectId } },
+                    { market: { projectId: projectId } },
+                    { user: { projectId: projectId } }
+                ]
             },
             include: {
                 user: { select: { fullName: true } },
                 point: { select: { name: true } },
+                market: { select: { name: true } },
                 redemptions: { select: { reward: true } }
             },
             orderBy: { startTime: 'desc' }

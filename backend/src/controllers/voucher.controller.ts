@@ -139,7 +139,7 @@ export const approveVoucher = async (req: Request, res: Response) => {
 
 export const verifyVoucherCode = async (req: Request, res: Response) => {
   try {
-    const { code, projectId } = req.query;
+    const { code, projectId, mode } = req.query;
     if (!code) return res.status(400).json({ message: 'Falta el código de voucher.' });
 
     const voucher = await prisma.voucher.findFirst({
@@ -151,7 +151,11 @@ export const verifyVoucherCode = async (req: Request, res: Response) => {
     });
 
     if (!voucher) return res.status(404).json({ message: 'Código no encontrado o inválido.' });
-    if (voucher.status === 'PENDING') return res.status(400).json({ message: 'Este código aún no ha sido aprobado por el Punto de Venta.' });
+    
+    if (mode !== 'b2b2c_mixed' && voucher.status === 'PENDING') {
+      return res.status(400).json({ message: 'Este código aún no ha sido aprobado por el Punto de Venta.' });
+    }
+    
     if (voucher.status === 'REJECTED') return res.status(400).json({ message: 'Este código fue RECHAZADO por el Punto de Venta.' });
     if (voucher.status === 'REDEEMED') return res.status(400).json({ message: 'Este código YA FUE CANJEADO anteriormente.' });
 

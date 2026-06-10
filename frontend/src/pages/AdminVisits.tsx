@@ -1,11 +1,12 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2, Fingerprint, Calendar, Clock, MapPin, ExternalLink, FileText, CheckCircle2 } from 'lucide-react';
+import { Loader2, Fingerprint, Calendar, Clock, MapPin, ExternalLink, FileText, CheckCircle2, Image as ImageIcon, X as XIcon } from 'lucide-react';
 import AdminLayout from '../layouts/AdminLayout';
 import api from '../utils/api';
 
 const AdminVisits: React.FC = () => {
   const [visits, setVisits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [photoModal, setPhotoModal] = useState<{ open: boolean; photoUrl: string }>({ open: false, photoUrl: '' });
 
   const project = JSON.parse(localStorage.getItem('project') || '{}');
 
@@ -185,9 +186,9 @@ const AdminVisits: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 text-right">
                         {item.facadePhoto ? (
-                          <a href={item.facadePhoto} target="_blank" rel="noreferrer" className="inline-flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 hover:border-blue-500 hover:text-blue-600 rounded-2xl transition-all text-[10px] font-black uppercase text-slate-500">
-                            Ver Fachada <ExternalLink size={14} />
-                          </a>
+                          <button onClick={() => setPhotoModal({ open: true, photoUrl: item.facadePhoto })} className="inline-flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 hover:bg-brand-purple/10 hover:text-brand-purple hover:border-brand-purple/20 rounded-2xl transition-all text-[10px] font-black uppercase text-slate-500">
+                            Ver Fachada <ImageIcon size={14} />
+                          </button>
                         ) : (
                           <span className="text-[10px] font-bold text-slate-300 uppercase italic">Sin Foto</span>
                         )}
@@ -209,6 +210,30 @@ const AdminVisits: React.FC = () => {
             </div>
           </div>
         )}
+
+        {/* Photo Viewer Modal */}
+        {photoModal.open && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/90 backdrop-blur-sm" onClick={() => setPhotoModal({ open: false, photoUrl: '' })} />
+            <div className="relative z-10 w-full max-w-4xl h-[80vh] flex flex-col items-center justify-center">
+              <button 
+                onClick={() => setPhotoModal({ open: false, photoUrl: '' })} 
+                className="absolute top-0 right-0 p-3 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+              >
+                <XIcon size={32} />
+              </button>
+              
+              <div className="relative w-full h-full flex items-center justify-center">
+                <img 
+                  src={photoModal.photoUrl} 
+                  alt="Evidencia Fachada" 
+                  className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
       </div>
     </AdminLayout>
   );

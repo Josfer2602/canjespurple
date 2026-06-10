@@ -24,7 +24,9 @@ const AdminProjectConfig: React.FC = () => {
   const [endDate, setEndDate] = useState(project.config?.end_date || '');
 
   // New Flujo Antifraude & Whitelabeling
-  const [requiresQrValidation, setRequiresQrValidation] = useState(!!project.config?.requires_qr_validation);
+  const [triangulationMode, setTriangulationMode] = useState<'b2b2c_digital' | 'b2b2c_mixed' | 'physical'>(
+    project.config?.triangulation_mode || (project.config?.requires_qr_validation ? 'b2b2c_digital' : 'physical')
+  );
   const [pdvMode, setPdvMode] = useState<'specific' | 'general'>(project.config?.pdv_mode || 'specific');
   const [brandColor, setBrandColor] = useState(project.config?.brandColor || '#8B5CF6');
   const [logoUrl, setLogoUrl] = useState(project.logoUrl || '');
@@ -60,7 +62,7 @@ const AdminProjectConfig: React.FC = () => {
         redemption_unit: redemptionUnit,
         start_date: startDate,
         end_date: endDate,
-        requires_qr_validation: requiresQrValidation,
+        triangulation_mode: triangulationMode,
         pdv_mode: pdvMode,
         brandColor,
         kvUrl
@@ -144,23 +146,79 @@ const AdminProjectConfig: React.FC = () => {
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                 <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight italic">Información de Campaña</h3>
 
-                {/* Flujo Antifraude Toggle */}
-                <div className="bg-brand-purple/5 border border-brand-purple/20 rounded-2xl p-5 mb-4 flex items-center justify-between">
-                  <div className="space-y-1">
-                    <h4 className="text-sm font-black text-brand-purple uppercase">Flujo Antifraude (Triangulación B2B2C)</h4>
-                    <p className="text-[10px] text-slate-600 font-bold max-w-lg leading-relaxed">
-                      Al encender esta opción, el promotor staff ya no podrá registrar canjes directamente. El flujo exigirá que el consumidor escanee un QR, suba su boleta y el Puesto de Venta lo valide.
-                    </p>
+                {/* Modo de Triangulación Selector */}
+                <div className="border border-slate-100 rounded-2xl p-5 mb-4 bg-slate-50">
+                  <h4 className="text-sm font-black text-slate-700 uppercase tracking-tight mb-1">Modo de Triangulación / Canje</h4>
+                  <p className="text-[10px] text-slate-500 font-bold mb-4 leading-relaxed">
+                    Define cómo se validarán los canjes entre el Promotor, el Cliente y el Puesto de Venta.
+                  </p>
+                  <div className="space-y-3">
+                    {/* Flujo 1 */}
+                    <button
+                      type="button"
+                      onClick={() => setTriangulationMode('b2b2c_digital')}
+                      className={`w-full text-left p-4 rounded-xl border-2 transition-all ${triangulationMode === 'b2b2c_digital'
+                          ? 'border-brand-purple bg-brand-purple/5'
+                          : 'border-slate-200 bg-white hover:border-brand-purple/50'
+                        }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${triangulationMode === 'b2b2c_digital' ? 'border-brand-purple' : 'border-slate-300'}`}>
+                          {triangulationMode === 'b2b2c_digital' && <div className="w-1.5 h-1.5 rounded-full bg-brand-purple" />}
+                        </div>
+                        <span className={`text-[11px] font-black uppercase tracking-widest ${triangulationMode === 'b2b2c_digital' ? 'text-brand-purple' : 'text-slate-600'}`}>
+                          Flujo 1: Digital B2B2C (Aprobado por PDV)
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 leading-relaxed font-medium pl-5">
+                        El cliente se registra online, el PDV lo aprueba desde su portal, y el promotor solo entrega el premio basándose en el QR.
+                      </p>
+                    </button>
+
+                    {/* Flujo 2 */}
+                    <button
+                      type="button"
+                      onClick={() => setTriangulationMode('b2b2c_mixed')}
+                      className={`w-full text-left p-4 rounded-xl border-2 transition-all ${triangulationMode === 'b2b2c_mixed'
+                          ? 'border-brand-purple bg-brand-purple/5'
+                          : 'border-slate-200 bg-white hover:border-brand-purple/50'
+                        }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${triangulationMode === 'b2b2c_mixed' ? 'border-brand-purple' : 'border-slate-300'}`}>
+                          {triangulationMode === 'b2b2c_mixed' && <div className="w-1.5 h-1.5 rounded-full bg-brand-purple" />}
+                        </div>
+                        <span className={`text-[11px] font-black uppercase tracking-widest ${triangulationMode === 'b2b2c_mixed' ? 'text-brand-purple' : 'text-slate-600'}`}>
+                          Flujo 2: Mixto (Canjista Valida)
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 leading-relaxed font-medium pl-5">
+                        El cliente se registra online y recibe un código. Luego el promotor ingresa el código y le toma foto al comprobante firmado por el PDV.
+                      </p>
+                    </button>
+
+                    {/* Flujo 3 */}
+                    <button
+                      type="button"
+                      onClick={() => setTriangulationMode('physical')}
+                      className={`w-full text-left p-4 rounded-xl border-2 transition-all ${triangulationMode === 'physical'
+                          ? 'border-brand-purple bg-brand-purple/5'
+                          : 'border-slate-200 bg-white hover:border-brand-purple/50'
+                        }`}
+                    >
+                      <div className="flex items-center gap-2 mb-1">
+                        <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${triangulationMode === 'physical' ? 'border-brand-purple' : 'border-slate-300'}`}>
+                          {triangulationMode === 'physical' && <div className="w-1.5 h-1.5 rounded-full bg-brand-purple" />}
+                        </div>
+                        <span className={`text-[11px] font-black uppercase tracking-widest ${triangulationMode === 'physical' ? 'text-brand-purple' : 'text-slate-600'}`}>
+                          Flujo 3: Físico Directo (Ticket de PDV)
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 leading-relaxed font-medium pl-5">
+                        No hay registro online del cliente. El PDV le da un ticket físico impreso y el promotor registra todos los datos directamente tomando foto al ticket.
+                      </p>
+                    </button>
                   </div>
-                  <label className="relative inline-flex items-center cursor-pointer ml-4">
-                    <input
-                      type="checkbox"
-                      className="sr-only peer"
-                      checked={requiresQrValidation}
-                      onChange={(e) => setRequiresQrValidation(e.target.checked)}
-                    />
-                    <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-brand-teal drop-shadow-sm"></div>
-                  </label>
                 </div>
 
                 {/* PDV Mode Selector */}

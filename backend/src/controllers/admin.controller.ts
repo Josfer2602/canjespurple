@@ -231,17 +231,44 @@ export const getMarkets = async (req: Request, res: Response) => {
 
 export const createMarket = async (req: Request, res: Response) => {
   try {
-    const { name, number, address, projectId } = req.body;
+    const { name, number, address, projectId, requiresApproval, approvalLimit } = req.body;
     
     // Generar código automático si no se envía
     const generatedNumber = number || `MK-${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
 
     const market = await prisma.market.create({
-      data: { name, number: generatedNumber, address, projectId }
+      data: { 
+        name, 
+        number: generatedNumber, 
+        address, 
+        projectId,
+        requiresApproval: !!requiresApproval,
+        approvalLimit: approvalLimit ? parseFloat(approvalLimit) : null
+      }
     });
     res.json({ success: true, market });
   } catch (error: any) {
     res.status(500).json({ message: 'Error creating market', detail: error.message });
+  }
+};
+
+export const updateMarket = async (req: Request, res: Response) => {
+  const { id } = req.params;
+  try {
+    const { name, number, address, requiresApproval, approvalLimit } = req.body;
+    const market = await prisma.market.update({
+      where: { id },
+      data: { 
+        name, 
+        number, 
+        address,
+        requiresApproval: !!requiresApproval,
+        approvalLimit: approvalLimit ? parseFloat(approvalLimit) : null
+      }
+    });
+    res.json({ success: true, market });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error updating market', detail: error.message });
   }
 };
 
@@ -514,19 +541,81 @@ export const getAdminRedemptions = async (req: Request, res: Response) => {
     const { projectId } = req.query;
     const redemptions = await prisma.redemption.findMany({
       where: { projectId: projectId as string },
-      orderBy: { createdAt: 'desc' },
       include: {
         visit: {
           include: {
-            user: { select: { fullName: true, email: true } },
-            point: { select: { name: true } }
+            user: { select: { fullName: true } },
+            point: { select: { name: true } },
+            market: { select: { name: true } }
           }
-        }
-      }
+        },
+        items: true
+      },
+      orderBy: { createdAt: 'desc' },
+      take: 200
     });
     res.json(redemptions);
   } catch (error: any) {
     res.status(500).json({ message: 'Error fetching redemptions', detail: error.message });
+  }
+};
+
+export const approveRedemption = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const redemption = await prisma.redemption.findUnique({
+      where: { id },
+      include: { visit: true }
+    });
+
+    if (!redemption || redemption.status !== 'PENDING') {
+      return res.status(400).json({ message: 'Canje no encontrado o no está pendiente.' });
+    }
+
+    // Actualizar estado a APPROVED
+    await prisma.redemption.update({
+      where: { id },
+      data: { status: 'APPROVED' }
+    });
+
+    // Descontar Inventario
+    const extraData = redemption.extraData as any;
+    const rewardItem = extraData?.reward;
+    if (rewardItem) {
+      try {
+        const whereInv: any = { projectId: redemption.projectId, itemName: rewardItem };
+        if (redemption.visit.pointId) {
+          whereInv.pointId = redemption.visit.pointId;
+        } else if (redemption.visit.marketId) {
+          whereInv.marketId = redemption.visit.marketId;
+        } else {
+          whereInv.userId = redemption.visit.userId;
+        }
+        await prisma.inventory.updateMany({
+          where: whereInv,
+          data: { stock: { decrement: 1 } }
+        });
+      } catch (invErr) {
+        console.error('⚠️ Error descontando inventario tras aprobación:', invErr);
+      }
+    }
+
+    res.json({ success: true, message: 'Canje aprobado y stock descontado.' });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error aprobando canje', detail: error.message });
+  }
+};
+
+export const rejectRedemption = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    await prisma.redemption.update({
+      where: { id },
+      data: { status: 'REJECTED' }
+    });
+    res.json({ success: true, message: 'Canje rechazado.' });
+  } catch (error: any) {
+    res.status(500).json({ message: 'Error rechazando canje', detail: error.message });
   }
 };
 

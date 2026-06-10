@@ -78,6 +78,20 @@ export const createRedemption = async (req: Request, res: Response) => {
       console.log(`✅ Todas las fotos subidas a Drive (${uploadedPhotos.length})`);
     }
 
+    // 4.5 Validar Límite de Aprobación
+    let redemptionStatus = 'APPROVED';
+    if (visit.market && visit.market.requiresApproval && visit.market.approvalLimit !== null) {
+      const limit = Number(visit.market.approvalLimit);
+      const amountToCheck = purchaseAmount || 0;
+      // Also consider if they are using quantity instead of amount
+      const quantityToCheck = items ? items.reduce((acc: number, curr: any) => acc + (parseInt(curr.quantity) || 1), 0) : 0;
+      
+      if (amountToCheck > limit || quantityToCheck > limit) {
+        redemptionStatus = 'PENDING';
+        console.log(`[APPROVAL] Canje marcado como PENDIENTE. Supera el límite de ${limit}`);
+      }
+    }
+
     // 5. Guardar canje en DB con URLs de Drive
     const redemption = await prisma.redemption.create({
       data: {
@@ -90,6 +104,7 @@ export const createRedemption = async (req: Request, res: Response) => {
         photos: uploadedPhotos,
         extraData: extraData || {},
         voucherId: voucherId || null,
+        status: redemptionStatus,
         ...(items && items.length > 0 && {
           items: {
             create: items.map((item: any) => ({
@@ -105,11 +120,12 @@ export const createRedemption = async (req: Request, res: Response) => {
       await prisma.voucher.update({ where: { id: voucherId }, data: { status: 'REDEEMED' } });
     }
 
-    console.log(`✅ Canje guardado en DB: ${redemption.id}`);
+    console.log(`✅ Canje guardado en DB: ${redemption.id} (${redemptionStatus})`);
 
-    // 6. Descontar Inventario
-    const rewardItem = extraData?.reward;
-    if (rewardItem) {
+    // 6. Descontar Inventario SOLO si está aprobado
+    if (redemptionStatus === 'APPROVED') {
+      const rewardItem = extraData?.reward;
+      if (rewardItem) {
       try {
         const whereInv: any = { projectId, itemName: rewardItem };
         if (visit.pointId) {
@@ -126,6 +142,7 @@ export const createRedemption = async (req: Request, res: Response) => {
         console.log(`✅ Stock descontado para: ${rewardItem}`);
       } catch (invErr) {
         console.error('⚠️ Error descontando inventario:', invErr);
+      }
       }
     }
 
@@ -145,7 +162,7 @@ export const createRedemption = async (req: Request, res: Response) => {
       }
     }
 
-    res.json({ success: true, redemptionId: redemption.id });
+    res.json({ success: true, redemptionId: redemption.id, status: redemptionStatus });
   } catch (error: any) {
     console.error('❌ Error en Canje:', error);
     // Si el error es de Drive, dar un mensaje claro al usuario

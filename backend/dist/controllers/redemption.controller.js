@@ -57,6 +57,18 @@ const createRedemption = async (req, res) => {
             }
             console.log(`✅ Todas las fotos subidas a Drive (${uploadedPhotos.length})`);
         }
+        // 4.5 Validar Límite de Aprobación
+        let redemptionStatus = 'APPROVED';
+        if (visit.market && visit.market.requiresApproval && visit.market.approvalLimit !== null) {
+            const limit = Number(visit.market.approvalLimit);
+            const amountToCheck = purchaseAmount || 0;
+            // Also consider if they are using quantity instead of amount
+            const quantityToCheck = items ? items.reduce((acc, curr) => acc + (parseInt(curr.quantity) || 1), 0) : 0;
+            if (amountToCheck > limit || quantityToCheck > limit) {
+                redemptionStatus = 'PENDING';
+                console.log(`[APPROVAL] Canje marcado como PENDIENTE. Supera el límite de ${limit}`);
+            }
+        }
         // 5. Guardar canje en DB con URLs de Drive
         const redemption = await db_1.default.redemption.create({
             data: {
@@ -69,11 +81,12 @@ const createRedemption = async (req, res) => {
                 photos: uploadedPhotos,
                 extraData: extraData || {},
                 voucherId: voucherId || null,
+                status: redemptionStatus,
                 ...(items && items.length > 0 && {
                     items: {
                         create: items.map((item) => ({
-                            presentationId: item.presentationId,
-                            quantity: item.quantity
+                            productName: item.productName || item.presentationId,
+                            quantity: parseInt(item.quantity, 10) || 1
                         }))
                     }
                 })
@@ -82,29 +95,31 @@ const createRedemption = async (req, res) => {
         if (voucherId) {
             await db_1.default.voucher.update({ where: { id: voucherId }, data: { status: 'REDEEMED' } });
         }
-        console.log(`✅ Canje guardado en DB: ${redemption.id}`);
-        // 6. Descontar Inventario
-        const rewardItem = extraData?.reward;
-        if (rewardItem) {
-            try {
-                const whereInv = { projectId, itemName: rewardItem };
-                if (visit.pointId) {
-                    whereInv.pointId = visit.pointId;
+        console.log(`✅ Canje guardado en DB: ${redemption.id} (${redemptionStatus})`);
+        // 6. Descontar Inventario SOLO si está aprobado
+        if (redemptionStatus === 'APPROVED') {
+            const rewardItem = extraData?.reward;
+            if (rewardItem) {
+                try {
+                    const whereInv = { projectId, itemName: rewardItem };
+                    if (visit.pointId) {
+                        whereInv.pointId = visit.pointId;
+                    }
+                    else if (visit.marketId) {
+                        whereInv.marketId = visit.marketId;
+                    }
+                    else {
+                        whereInv.userId = visit.userId;
+                    }
+                    await db_1.default.inventory.updateMany({
+                        where: whereInv,
+                        data: { stock: { decrement: 1 } }
+                    });
+                    console.log(`✅ Stock descontado para: ${rewardItem}`);
                 }
-                else if (visit.marketId) {
-                    whereInv.marketId = visit.marketId;
+                catch (invErr) {
+                    console.error('⚠️ Error descontando inventario:', invErr);
                 }
-                else {
-                    whereInv.userId = visit.userId;
-                }
-                await db_1.default.inventory.updateMany({
-                    where: whereInv,
-                    data: { stock: { decrement: 1 } }
-                });
-                console.log(`✅ Stock descontado para: ${rewardItem}`);
-            }
-            catch (invErr) {
-                console.error('⚠️ Error descontando inventario:', invErr);
             }
         }
         // 7. Marcar Ubicación del Canje (PostGIS)
@@ -123,7 +138,7 @@ const createRedemption = async (req, res) => {
                 console.error('⚠️ Error guardando coordenadas:', geoErr);
             }
         }
-        res.json({ success: true, redemptionId: redemption.id });
+        res.json({ success: true, redemptionId: redemption.id, status: redemptionStatus });
     }
     catch (error) {
         console.error('❌ Error en Canje:', error);

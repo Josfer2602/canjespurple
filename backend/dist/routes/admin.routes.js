@@ -16,6 +16,7 @@ router.post('/points/:id/access', admin_controller_1.generatePdvAccess);
 // Markets management
 router.get('/markets', admin_controller_1.getMarkets);
 router.post('/markets', admin_controller_1.createMarket);
+router.put('/markets/:id', admin_controller_1.updateMarket);
 router.delete('/markets/:id', admin_controller_1.deleteMarket);
 // Project management & Reset
 router.post('/project/config', admin_controller_1.updateProjectConfig);
@@ -38,6 +39,8 @@ router.delete('/rules/:id', admin_controller_1.deleteRule);
 router.get('/redemptions', admin_controller_1.getAdminRedemptions);
 router.put('/redemptions/:id', admin_controller_1.updateRedemption);
 router.delete('/redemptions/:id', admin_controller_1.deleteRedemption);
+router.post('/redemptions/:id/approve', admin_controller_1.approveRedemption);
+router.post('/redemptions/:id/reject', admin_controller_1.rejectRedemption);
 // Check-Ins & Visits
 router.get('/visits', admin_controller_1.getAdminVisits);
 exports.default = router;

@@ -45,7 +45,7 @@ const ClientScanner: React.FC = () => {
   // Polling for voucher status
   useEffect(() => {
     let interval: any;
-    if (voucher && voucher.status === 'PENDING') {
+    if (voucher && voucher.status === 'PENDING' && point?.project?.config?.triangulation_mode !== 'b2b2c_mixed') {
       interval = setInterval(async () => {
         try {
           const res = await api.get(`/vouchers/${voucher.id}/status`);
@@ -250,7 +250,7 @@ const ClientScanner: React.FC = () => {
         ) : (
           <div className="bg-white rounded-3xl p-8 shadow-xl border border-slate-100 text-center flex flex-col items-center justify-center animate-in zoom-in duration-300">
              
-             {voucher.status === 'PENDING' && (
+             {voucher.status === 'PENDING' && point?.project?.config?.triangulation_mode !== 'b2b2c_mixed' && (
                <>
                   <div className="w-20 h-20 rounded-full flex items-center justify-center shadow-inner mb-6 relative" style={{ backgroundColor: theme.brandColor + '15', color: theme.brandColor }}>
                     <div className="absolute inset-0 border-4 border-t-transparent rounded-full animate-spin" style={{ borderLeftColor: theme.brandColor, borderBottomColor: theme.brandColor, borderRightColor: theme.brandColor }}></div>
@@ -263,7 +263,7 @@ const ClientScanner: React.FC = () => {
                </>
              )}
 
-             {voucher.status === 'APPROVED' && (
+             {(voucher.status === 'APPROVED' || (voucher.status === 'PENDING' && point?.project?.config?.triangulation_mode === 'b2b2c_mixed')) && (
                <>
                   <div className="w-24 h-24 bg-green-100 text-green-500 rounded-full flex items-center justify-center mb-6 shadow-inner animate-bounce">
                     <CheckCircle2 size={48} />

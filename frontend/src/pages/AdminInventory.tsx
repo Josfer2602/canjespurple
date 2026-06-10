@@ -182,6 +182,7 @@ const AdminInventory: React.FC = () => {
                 <Plus size={16} />
                 Cargar Material
               </button>
+              </div>
             )}
             <button
               onClick={fetchData}

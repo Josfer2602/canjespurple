@@ -4,6 +4,7 @@ import AdminLayout from '../layouts/AdminLayout';
 import api from '../utils/api';
 import ConfirmModal from '../components/ConfirmModal';
 import toast from 'react-hot-toast';
+import { Check, X as XIcon, Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 
 const AdminRedemptions: React.FC = () => {
   const [redemptions, setRedemptions] = useState<any[]>([]);
@@ -12,6 +13,11 @@ const AdminRedemptions: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState<{ open: boolean; id: string; reward: string }>({ open: false, id: '', reward: '' });
   const [deleting, setDeleting] = useState(false);
+  const [approving, setApproving] = useState<string | null>(null);
+  const [rejecting, setRejecting] = useState<string | null>(null);
+  
+  // Photo Viewer
+  const [photoModal, setPhotoModal] = useState<{ open: boolean; photos: string[]; index: number }>({ open: false, photos: [], index: 0 });
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const project = JSON.parse(localStorage.getItem('project') || '{}');
@@ -98,6 +104,44 @@ const AdminRedemptions: React.FC = () => {
     }
   };
 
+  const handleApprove = async (id: string) => {
+    setApproving(id);
+    try {
+      const res = await api.post(`/admin/redemptions/${id}/approve`);
+      if (res.data.success) {
+        toast.success('Canje aprobado y stock descontado');
+        fetchData();
+      }
+    } catch (err: any) {
+      toast.error(err.response?.data?.message || 'Error al aprobar');
+    } finally {
+      setApproving(null);
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    setRejecting(id);
+    try {
+      const res = await api.post(`/admin/redemptions/${id}/reject`);
+      if (res.data.success) {
+        toast.success('Canje rechazado');
+        fetchData();
+      }
+    } catch (err: any) {
+      toast.error('Error al rechazar');
+    } finally {
+      setRejecting(null);
+    }
+  };
+
+  const openPhotoModal = (photos: string[]) => {
+    if (photos && photos.length > 0) {
+      setPhotoModal({ open: true, photos, index: 0 });
+    } else {
+      toast.error('No hay evidencias para este canje');
+    }
+  };
+
   const handleExportCSV = () => {
     if (redemptions.length === 0) return;
 
@@ -177,6 +221,7 @@ const AdminRedemptions: React.FC = () => {
               <table className="w-full text-left border-collapse min-w-max">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-50">
+                    <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Estado</th>
                     <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Fecha / Hora</th>
                     <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">DNI Cliente</th>
                     {requireTicket && <th className="px-6 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest whitespace-nowrap">Comprobante</th>}
@@ -194,6 +239,11 @@ const AdminRedemptions: React.FC = () => {
                 <tbody className="divide-y divide-slate-50">
                   {redemptions.map(item => (
                     <tr key={item.id} className="hover:bg-slate-50/50 transition-all duration-300 group">
+                      <td className="px-6 py-5 whitespace-nowrap">
+                        {item.status === 'PENDING' && <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-amber-50 text-amber-600 text-[9px] font-black tracking-widest uppercase border border-amber-200">Pendiente</span>}
+                        {item.status === 'APPROVED' && <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-green-50 text-green-600 text-[9px] font-black tracking-widest uppercase border border-green-200">Aprobado</span>}
+                        {item.status === 'REJECTED' && <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-red-50 text-red-600 text-[9px] font-black tracking-widest uppercase border border-red-200">Rechazado</span>}
+                      </td>
                       <td className="px-6 py-5 whitespace-nowrap">
                          <span className="text-xs font-black text-slate-800 tracking-tighter italic">{new Date(item.createdAt).toLocaleDateString()}</span>
                          <span className="text-[10px] text-brand-purple font-black block tracking-widest uppercase mt-0.5">{new Date(item.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit'})}</span>
@@ -225,6 +275,19 @@ const AdminRedemptions: React.FC = () => {
                       {user.role === 'ADMIN' && (
                         <td className="px-6 py-5 text-right">
                           <div className="flex items-center justify-end gap-1.5">
+                            {item.status === 'PENDING' && (
+                              <>
+                                <button disabled={approving === item.id} onClick={() => handleApprove(item.id)} className="p-2.5 bg-green-50 text-green-600 hover:bg-green-600 hover:text-white transition-all rounded-xl border border-green-200" title="Aprobar Canje">
+                                  {approving === item.id ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
+                                </button>
+                                <button disabled={rejecting === item.id} onClick={() => handleReject(item.id)} className="p-2.5 bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all rounded-xl border border-red-200" title="Rechazar Canje">
+                                  {rejecting === item.id ? <Loader2 size={15} className="animate-spin" /> : <XIcon size={15} />}
+                                </button>
+                              </>
+                            )}
+                            <button onClick={() => openPhotoModal(item.photos)} className="p-2.5 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white transition-all rounded-xl border border-blue-200" title="Ver Evidencias">
+                              <ImageIcon size={15} />
+                            </button>
                             <button onClick={() => handleEditClick(item)} className="p-2.5 bg-brand-purple/5 text-brand-purple hover:bg-brand-purple hover:text-white transition-all rounded-xl border border-brand-purple/10" title="Editar Canje">
                                <Edit3 size={15} />
                              </button>
@@ -337,6 +400,58 @@ const AdminRedemptions: React.FC = () => {
             : `Al borrar, se reintegrará 1 unidad de "${deleteConfirm.reward}" al stock.`}
           confirmText="Sí, Eliminar Permanentemente"
         />
+
+        {/* Photo Viewer Modal */}
+        {photoModal.open && (
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+            <div className="fixed inset-0 bg-black/90 backdrop-blur-sm" onClick={() => setPhotoModal({ open: false, photos: [], index: 0 })} />
+            <div className="relative z-10 w-full max-w-4xl h-[80vh] flex flex-col items-center justify-center">
+              <button 
+                onClick={() => setPhotoModal({ open: false, photos: [], index: 0 })} 
+                className="absolute top-0 right-0 p-3 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+              >
+                <XIcon size={32} />
+              </button>
+              
+              <div className="relative w-full h-full flex items-center justify-center">
+                <img 
+                  src={photoModal.photos[photoModal.index]} 
+                  alt="Evidencia" 
+                  className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
+                />
+              </div>
+              
+              {photoModal.photos.length > 1 && (
+                <div className="absolute inset-y-0 left-0 right-0 flex items-center justify-between px-4 pointer-events-none">
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPhotoModal(prev => ({ ...prev, index: (prev.index - 1 + prev.photos.length) % prev.photos.length }));
+                    }}
+                    className="p-4 bg-black/50 text-white rounded-full hover:bg-black/80 pointer-events-auto transition-all backdrop-blur-md"
+                  >
+                    <ChevronLeft size={32} />
+                  </button>
+                  <button 
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setPhotoModal(prev => ({ ...prev, index: (prev.index + 1) % prev.photos.length }));
+                    }}
+                    className="p-4 bg-black/50 text-white rounded-full hover:bg-black/80 pointer-events-auto transition-all backdrop-blur-md"
+                  >
+                    <ChevronRight size={32} />
+                  </button>
+                </div>
+              )}
+              
+              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-black/50 backdrop-blur-md px-6 py-2 rounded-full">
+                <p className="text-white text-xs font-black tracking-widest uppercase">
+                  Foto {photoModal.index + 1} de {photoModal.photos.length}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </AdminLayout>
   );
