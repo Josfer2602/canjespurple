@@ -104,7 +104,37 @@ const ChoroplethLayer: React.FC<ChoroplethLayerProps> = ({ geojsonUrl, points })
 
   const onEachFeature = (feature: any, layer: any) => {
     const count = feature.properties?.redemptionCount || 0;
-    const name = feature.properties?.name || feature.properties?.NOM_DIST || feature.properties?.NOM_PROV || 'Región';
+    
+    // Búsqueda dinámica del nombre del distrito/región
+    let name = 'Región';
+    if (feature.properties) {
+      // 1. Intentar claves comunes
+      name = feature.properties.name || 
+             feature.properties.NAME || 
+             feature.properties.NOM_DIST || 
+             feature.properties.NOMB_DIST || 
+             feature.properties.NOMBDIST || 
+             feature.properties.distrito || 
+             feature.properties.DISTRITO || 
+             feature.properties.NOM_PROV || 
+             feature.properties.estado ||
+             feature.properties.state_name;
+             
+      // 2. Si no encuentra ninguna conocida, tomar el primer valor de texto válido
+      if (!name || name === 'Región') {
+        const potentialKey = Object.keys(feature.properties).find(k => 
+          typeof feature.properties[k] === 'string' && 
+          feature.properties[k].trim() !== '' &&
+          !k.toLowerCase().includes('id') &&
+          !k.toLowerCase().includes('code')
+        );
+        if (potentialKey) {
+          name = feature.properties[potentialKey];
+        } else {
+          name = 'Región'; // Fallback final
+        }
+      }
+    }
     
     layer.bindTooltip(`
       <div style="text-align: center;">
