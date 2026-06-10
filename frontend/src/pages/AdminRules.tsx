@@ -4,6 +4,7 @@ import AdminLayout from '../layouts/AdminLayout';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../components/ConfirmModal';
+import ExcelImportButton from '../components/ExcelImportButton';
 
 const AdminRules: React.FC = () => {
   const [rules, setRules] = useState<any[]>([]);
@@ -73,6 +74,26 @@ const AdminRules: React.FC = () => {
     }
   };
 
+  const handleImportRules = async (data: any[]) => {
+    try {
+      const toastId = toast.loading('Importando lineamientos...');
+      const res = await api.post('/import/rules', { projectId: project.id, data });
+      toast.dismiss(toastId);
+      if (res.data.success) {
+        toast.success(res.data.message);
+        fetchData();
+      }
+    } catch (err: any) {
+      toast.dismiss();
+      toast.error(err.response?.data?.message || 'Error en la importación masiva');
+    }
+  };
+
+  const templateData = [
+    { Premio: 'Polo BTL', Monto_Minimo: 100, Monto_Maximo: 200, Tipo_Regla: 'Monto' },
+    { Premio: 'Gorra BTL', Monto_Minimo: 201, Monto_Maximo: 500, Tipo_Regla: 'Monto' }
+  ];
+
   const handleEdit = (rule: any) => {
     setForm({
       id: rule.id,
@@ -106,16 +127,24 @@ const AdminRules: React.FC = () => {
             <h2 className="text-2xl font-black text-slate-800 tracking-tight uppercase italic">Gestión de Premios</h2>
             <p className="text-sm text-slate-500 font-medium">Define los lineamientos operativos según el consumo.</p>
           </div>
-          <button 
-            onClick={() => {
-              setForm({ id: undefined, minPurchase: 0, maxPurchase: 0, rewardName: '', type: 'BY_AMOUNT', productCriteria: {} });
-              setShowModal(true);
-            }}
-            className="px-6 py-3 bg-brand-teal text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-brand-teal/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2 border border-brand-teal"
-          >
-            <Plus size={16} />
-            Nueva Regla
-          </button>
+          <div className="flex gap-3 items-center">
+            <ExcelImportButton 
+              onDataParsed={handleImportRules}
+              expectedHeaders={['Premio', 'Monto_Minimo', 'Monto_Maximo']}
+              templateName="Plantilla_Lineamientos"
+              templateData={templateData}
+            />
+            <button 
+              onClick={() => {
+                setForm({ id: undefined, minPurchase: 0, maxPurchase: 0, rewardName: '', type: 'BY_AMOUNT', productCriteria: {} });
+                setShowModal(true);
+              }}
+              className="px-6 py-3 bg-brand-teal text-white rounded-2xl font-black text-xs uppercase tracking-widest shadow-xl shadow-brand-teal/20 hover:scale-[1.02] active:scale-95 transition-all flex items-center gap-2 border border-brand-teal"
+            >
+              <Plus size={16} />
+              Nueva Regla
+            </button>
+          </div>
         </header>
 
         <div className="bg-brand-purple/5 p-6 rounded-[2.5rem] border border-brand-purple/10 flex items-start gap-4 shadow-xl shadow-brand-purple/5">

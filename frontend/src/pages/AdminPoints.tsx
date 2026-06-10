@@ -5,6 +5,7 @@ import AdminLayout from '../layouts/AdminLayout';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../components/ConfirmModal';
+import ExcelImportButton from '../components/ExcelImportButton';
 
 const AdminPoints: React.FC = () => {
   const [markets, setMarkets] = useState<any[]>([]);
@@ -137,6 +138,26 @@ const AdminPoints: React.FC = () => {
     a.click();
   };
 
+  const handleImportPoints = async (data: any[]) => {
+    try {
+      const toastId = toast.loading('Importando datos...');
+      const res = await api.post('/import/points', { projectId: project.id, data });
+      toast.dismiss(toastId);
+      if (res.data.success) {
+        toast.success(res.data.message);
+        fetchData();
+      }
+    } catch (err: any) {
+      toast.dismiss();
+      toast.error(err.response?.data?.message || 'Error en la importación masiva');
+    }
+  };
+
+  const templateData = [
+    { Mercado: 'Mercado Central', Direccion_Mercado: 'Jr. Puno 123', PDV: 'Puesto 15', Direccion_PDV: 'Pasillo B', Nombre_Dueno: 'Juan Perez', Telefono: '987654321' },
+    { Mercado: 'Mercado Mayorista', Direccion_Mercado: '', PDV: 'Stand Principal', Direccion_PDV: '', Nombre_Dueno: '', Telefono: '' }
+  ];
+
   const handlePrintQr = () => {
     const canvas = qrRef.current?.querySelector('canvas');
     if (!canvas) return;
@@ -231,7 +252,13 @@ const AdminPoints: React.FC = () => {
                 : 'Registra mercados y sus puntos de venta individuales.'}
             </p>
           </div>
-          <div className="flex gap-3">
+          <div className="flex gap-3 items-center">
+            <ExcelImportButton 
+              onDataParsed={handleImportPoints}
+              expectedHeaders={['Mercado']}
+              templateName="Plantilla_Mercados_PDV"
+              templateData={templateData}
+            />
             {pdvMode === 'specific' && (
               <button onClick={() => setShowPointModal(true)} className="px-5 py-3 bg-slate-100 text-slate-600 hover:bg-slate-200 rounded-2xl font-black text-xs uppercase tracking-widest transition-all flex items-center gap-2">
                 <Plus size={14} /> PDV

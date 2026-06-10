@@ -4,6 +4,7 @@ import AdminLayout from '../layouts/AdminLayout';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 import ConfirmModal from '../components/ConfirmModal';
+import ExcelImportButton from '../components/ExcelImportButton';
 
 const AdminInventory: React.FC = () => {
   const [inventory, setInventory] = useState<any[]>([]);
@@ -112,6 +113,30 @@ const AdminInventory: React.FC = () => {
     }
   };
 
+  const handleImportInventory = async (data: any[]) => {
+    try {
+      const toastId = toast.loading('Importando inventario...');
+      const res = await api.post('/import/inventory', { projectId: project.id, data });
+      toast.dismiss(toastId);
+      if (res.data.success) {
+        toast.success(res.data.message);
+        if (res.data.errors && res.data.errors.length > 0) {
+          console.warn('Errores de importación:', res.data.errors);
+          toast.error(`Hubo errores en ${res.data.errors.length} filas (ver consola)`);
+        }
+        fetchData();
+      }
+    } catch (err: any) {
+      toast.dismiss();
+      toast.error(err.response?.data?.message || 'Error en la importación masiva');
+    }
+  };
+
+  const templateData = [
+    { Producto: 'Polo BTL', Cantidad: 50, Alerta_Minima: 5, Mercado_Destino: 'Mercado Central', PDV_Destino: 'Puesto 15' },
+    { Producto: 'Gorra BTL', Cantidad: 100, Alerta_Minima: 10, Mercado_Destino: 'Mercado Mayorista', PDV_Destino: '' }
+  ];
+
   const filtered = inventory.filter(i => {
     const locName = i.market?.name || i.point?.name || i.user?.fullName || 'Sin Ubicación';
     return locName.toLowerCase().includes(search.toLowerCase()) || i.itemName.toLowerCase().includes(search.toLowerCase());
@@ -139,8 +164,15 @@ const AdminInventory: React.FC = () => {
               />
             </div>
             {user.role === 'ADMIN' && (
-              <button
-                onClick={() => {
+              <div className="flex gap-2">
+                <ExcelImportButton 
+                  onDataParsed={handleImportInventory}
+                  expectedHeaders={['Producto', 'Cantidad']}
+                  templateName="Plantilla_Inventario"
+                  templateData={templateData}
+                />
+                <button
+                  onClick={() => {
                   setIsQuickAdd(false);
                   setForm({ assignTo: 'market', marketId: '', pointId: '', itemName: '', stockToAdd: 1, threshold: 5 });
                   setShowModal(true);

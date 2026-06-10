@@ -9,6 +9,7 @@ import visitRoutes from './routes/visit.routes';
 import analyticsRoutes from './routes/analytics.routes';
 import adminRoutes from './routes/admin.routes';
 import voucherRoutes from './routes/voucher.routes';
+import importRoutes from './routes/import.routes';
 
 dotenv.config();
 
@@ -38,6 +39,7 @@ app.use('/api/visits', visitRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/vouchers', voucherRoutes);
+app.use('/api/import', importRoutes);
 
 // Health Check
 app.get('/api/health', (req, res) => {
