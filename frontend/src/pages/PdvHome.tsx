@@ -82,7 +82,7 @@ const PdvHome: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 font-sans">
+    <div className="min-h-screen bg-slate-50 font-sans max-w-md mx-auto relative shadow-2xl overflow-hidden">
       {/* Header Corporativo (Whitelabel) */}
       <div className="px-6 py-6 rounded-b-[2rem] shadow-sm flex items-center justify-between" style={{ backgroundColor: brandColor }}>
         <div className="flex items-center gap-4">

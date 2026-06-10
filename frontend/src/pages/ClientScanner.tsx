@@ -118,7 +118,7 @@ const ClientScanner: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pb-10 font-sans">
+    <div className="min-h-screen bg-slate-50 pb-10 font-sans max-w-md mx-auto relative shadow-2xl overflow-hidden">
       {/* Header KV */}
       <div className="relative w-full overflow-hidden" style={{ minHeight: theme.kvUrl ? '240px' : '100px', backgroundColor: theme.brandColor }}>
         {theme.kvUrl && (
