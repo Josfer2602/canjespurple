@@ -7,6 +7,28 @@ const AdminVisits: React.FC = () => {
   const [visits, setVisits] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [photoModal, setPhotoModal] = useState<{ open: boolean; photoUrl: string }>({ open: false, photoUrl: '' });
+  const [imageLoading, setImageLoading] = useState(true);
+
+  const getDirectImgUrl = (url: any) => {
+    if (!url) return '';
+    if (typeof url !== 'string') return '';
+    if (url.startsWith('data:')) return url;
+    if (url.startsWith('http') && !url.includes('drive.google.com')) return url;
+  
+    const driveRegex = /file\/d\/([^\/]+)/;
+    const ucRegex = /id=([^&]+)/;
+    const id = url.match(driveRegex)?.[1] || url.match(ucRegex)?.[1];
+    
+    if (id) {
+      return `${api.defaults.baseURL}/vouchers/photo/${id}`;
+    }
+    return url;
+  };
+
+  const handleOpenPhoto = (url: string) => {
+    setImageLoading(true);
+    setPhotoModal({ open: true, photoUrl: url });
+  };
 
   const project = JSON.parse(localStorage.getItem('project') || '{}');
 
@@ -186,7 +208,7 @@ const AdminVisits: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 text-right">
                         {item.facadePhoto ? (
-                          <button onClick={() => setPhotoModal({ open: true, photoUrl: item.facadePhoto })} className="inline-flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 hover:bg-brand-purple/10 hover:text-brand-purple hover:border-brand-purple/20 rounded-2xl transition-all text-[10px] font-black uppercase text-slate-500">
+                          <button onClick={() => handleOpenPhoto(item.facadePhoto)} className="inline-flex items-center gap-2 px-4 py-2 bg-slate-50 border border-slate-200 hover:bg-brand-purple/10 hover:text-brand-purple hover:border-brand-purple/20 rounded-2xl transition-all text-[10px] font-black uppercase text-slate-500">
                             Ver Fachada <ImageIcon size={14} />
                           </button>
                         ) : (
@@ -218,16 +240,23 @@ const AdminVisits: React.FC = () => {
             <div className="relative z-10 w-full max-w-4xl h-[80vh] flex flex-col items-center justify-center">
               <button 
                 onClick={() => setPhotoModal({ open: false, photoUrl: '' })} 
-                className="absolute top-0 right-0 p-3 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-colors"
+                className="absolute top-0 right-0 p-3 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-colors z-[210]"
               >
                 <XIcon size={32} />
               </button>
               
-              <div className="relative w-full h-full flex items-center justify-center">
+              <div className="relative w-full h-full flex items-center justify-center overflow-hidden" onClick={e => e.stopPropagation()}>
+                {imageLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Loader2 className="w-10 h-10 text-white animate-spin opacity-50" />
+                  </div>
+                )}
                 <img 
-                  src={photoModal.photoUrl} 
+                  src={getDirectImgUrl(photoModal.photoUrl)} 
                   alt="Evidencia Fachada" 
-                  className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
+                  className={`max-w-full max-h-full object-contain rounded-2xl shadow-2xl transition-opacity duration-300 ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
+                  onLoad={() => setImageLoading(false)}
+                  onError={() => setImageLoading(false)}
                 />
               </div>
             </div>
