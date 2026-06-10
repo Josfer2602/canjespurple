@@ -448,9 +448,12 @@ const AdminRedemptions: React.FC = () => {
               <div className="flex-1 flex flex-col items-center justify-center p-4 relative overflow-hidden" onClick={e => e.stopPropagation()}>
                 <img 
                   src={getDirectImgUrl(photoModal.photos[photoModal.index])} 
-                  alt={String(photoModal.photos[photoModal.index]).substring(0, 50) || "Evidencia"} 
+                  alt="Evidencia" 
                   className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
                 />
+                <p className="text-white mt-4 bg-red-600 p-2 z-50 rounded">
+                  DEBUG URL: {String(photoModal.photos[photoModal.index]).substring(0, 100)}
+                </p>
               </div>
               
               {photoModal.photos.length > 1 && (
