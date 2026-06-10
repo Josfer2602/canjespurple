@@ -7,7 +7,11 @@ echo "📥 Descargando últimos cambios..."
 git fetch --all
 git reset --hard origin/main
 
-# 2. Reconstruir los servicios sin caché para aplicar cambios de código
+# 2. Apagar contenedores actuales para liberar memoria RAM
+echo "🛑 Apagando servicios antiguos para liberar memoria..."
+docker compose down
+
+# 3. Reconstruir los servicios sin caché para aplicar cambios de código
 echo "🔨 Reconstruyendo servicios (esto tomará unos minutos)..."
 docker compose build --no-cache frontend backend
 
