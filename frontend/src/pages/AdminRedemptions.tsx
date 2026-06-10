@@ -34,6 +34,7 @@ const AdminRedemptions: React.FC = () => {
   
   // Photo Viewer
   const [photoModal, setPhotoModal] = useState<{ open: boolean; photos: string[]; index: number }>({ open: false, photos: [], index: 0 });
+  const [imageLoading, setImageLoading] = useState(true);
 
   const user = JSON.parse(localStorage.getItem('user') || '{}');
   const project = JSON.parse(localStorage.getItem('project') || '{}');
@@ -168,6 +169,7 @@ const AdminRedemptions: React.FC = () => {
     }
 
     if (arr.length > 0) {
+      setImageLoading(true);
       setPhotoModal({ open: true, photos: arr, index: 0 });
     } else {
       toast.error('No hay evidencias válidas para este canje');
@@ -446,14 +448,18 @@ const AdminRedemptions: React.FC = () => {
               </button>
               
               <div className="flex-1 flex flex-col items-center justify-center p-4 relative overflow-hidden" onClick={e => e.stopPropagation()}>
+                {imageLoading && (
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <Loader2 className="w-10 h-10 text-white animate-spin opacity-50" />
+                  </div>
+                )}
                 <img 
                   src={getDirectImgUrl(photoModal.photos[photoModal.index])} 
                   alt="Evidencia" 
-                  className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
+                  className={`max-w-full max-h-full object-contain rounded-2xl shadow-2xl transition-opacity duration-300 ${imageLoading ? 'opacity-0' : 'opacity-100'}`}
+                  onLoad={() => setImageLoading(false)}
+                  onError={() => setImageLoading(false)}
                 />
-                <p className="text-white mt-4 bg-red-600 p-2 z-50 rounded">
-                  DEBUG URL: {String(photoModal.photos[photoModal.index]).substring(0, 100)}
-                </p>
               </div>
               
               {photoModal.photos.length > 1 && (
@@ -461,6 +467,7 @@ const AdminRedemptions: React.FC = () => {
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
+                      setImageLoading(true);
                       setPhotoModal(prev => ({ ...prev, index: (prev.index - 1 + prev.photos.length) % prev.photos.length }));
                     }}
                     className="p-4 bg-black/50 text-white rounded-full hover:bg-black/80 pointer-events-auto transition-all backdrop-blur-md"
@@ -470,6 +477,7 @@ const AdminRedemptions: React.FC = () => {
                   <button 
                     onClick={(e) => {
                       e.stopPropagation();
+                      setImageLoading(true);
                       setPhotoModal(prev => ({ ...prev, index: (prev.index + 1) % prev.photos.length }));
                     }}
                     className="p-4 bg-black/50 text-white rounded-full hover:bg-black/80 pointer-events-auto transition-all backdrop-blur-md"
