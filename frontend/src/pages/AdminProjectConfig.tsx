@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Save, Trash2, Loader2, Plus, X, AlertTriangle, Calendar } from 'lucide-react';
+import { Save, Trash2, Loader2, Plus, X, AlertTriangle, Calendar, Ticket } from 'lucide-react';
 import AdminLayout from '../layouts/AdminLayout';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
@@ -10,7 +10,7 @@ const AdminProjectConfig: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [resetting, setResetting] = useState(false);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
-  const [activeTab, setActiveTab] = useState<'general' | 'photos' | 'fields'>('general');
+  const [activeTab, setActiveTab] = useState<'general' | 'photos' | 'fields' | 'theme' | 'ticket'>('general');
 
   // Form states
   const [projectName, setProjectName] = useState(project.name || '');
@@ -22,11 +22,25 @@ const AdminProjectConfig: React.FC = () => {
   // New Duración de Campaña states
   const [startDate, setStartDate] = useState(project.config?.start_date || '');
   const [endDate, setEndDate] = useState(project.config?.end_date || '');
+  const [heatmapLevel, setHeatmapLevel] = useState<'city' | 'district'>(project.config?.heatmap_level || 'city');
 
   // New Flujo Antifraude & Whitelabeling
+  const [isTriangulationActive, setIsTriangulationActive] = useState(!!project.config?.is_triangulation_active);
   const [triangulationMode, setTriangulationMode] = useState<'b2b2c_digital' | 'b2b2c_mixed' | 'physical'>(
-    project.config?.triangulation_mode || (project.config?.requires_qr_validation ? 'b2b2c_digital' : 'physical')
+    project.config?.triangulation_mode || 'physical'
   );
+  
+  // Ticket Generator State
+  const [ticketFields, setTicketFields] = useState<{ id: string; label: string }[]>(
+    project.config?.ticket_config?.fields || [
+      { id: 'f1', label: 'DNI Cliente' },
+      { id: 'f2', label: 'Nombre Cliente' },
+      { id: 'f3', label: 'Monto de Compra (S/)' },
+      { id: 'f4', label: 'Producto/Premio' },
+      { id: 'f5', label: 'Fecha' }
+    ]
+  );
+
   const [pdvMode, setPdvMode] = useState<'specific' | 'general'>(project.config?.pdv_mode || 'specific');
   const [brandColor, setBrandColor] = useState(project.config?.brandColor || '#8B5CF6');
   const [logoUrl, setLogoUrl] = useState(project.logoUrl || '');
@@ -40,6 +54,10 @@ const AdminProjectConfig: React.FC = () => {
 
   const handleAddPhoto = () => {
     setPhotoSlots([...photoSlots, { label: 'Nueva Foto', key: `photo_${Date.now()}`, required: true }]);
+  };
+
+  const handleAddTicketField = () => {
+    setTicketFields([...ticketFields, { id: `tf_${Date.now()}`, label: 'Nuevo Campo' }]);
   };
 
   const handleSave = async () => {
@@ -62,7 +80,10 @@ const AdminProjectConfig: React.FC = () => {
         redemption_unit: redemptionUnit,
         start_date: startDate,
         end_date: endDate,
+        heatmap_level: heatmapLevel,
+        is_triangulation_active: isTriangulationActive,
         triangulation_mode: triangulationMode,
+        ticket_config: { fields: ticketFields },
         pdv_mode: pdvMode,
         brandColor,
         kvUrl
@@ -124,9 +145,12 @@ const AdminProjectConfig: React.FC = () => {
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
           <div className="lg:col-span-1 space-y-2">
             <TabButton active={activeTab === 'general'} onClick={() => setActiveTab('general')} label="General" />
-            <TabButton active={activeTab === 'photos' as any} onClick={() => setActiveTab('photos' as any)} label="Fotos Canje" />
-            <TabButton active={activeTab === 'fields' as any} onClick={() => setActiveTab('fields' as any)} label="Atributos Canje" />
-            <TabButton active={activeTab === 'theme' as any} onClick={() => setActiveTab('theme' as any)} label="Personalización Visual" />
+            <TabButton active={activeTab === 'photos'} onClick={() => setActiveTab('photos')} label="Fotos Canje" />
+            <TabButton active={activeTab === 'fields'} onClick={() => setActiveTab('fields')} label="Atributos Canje" />
+            <TabButton active={activeTab === 'theme'} onClick={() => setActiveTab('theme')} label="Personalización Visual" />
+            {isTriangulationActive && (
+              <TabButton active={activeTab === 'ticket'} onClick={() => setActiveTab('ticket')} label="Generador Tickets" />
+            )}
 
             <div className="pt-8 mt-8 border-t border-slate-200">
               <h4 className="text-[10px] font-black text-red-400 uppercase tracking-widest px-4 mb-4">Zona de Peligro</h4>
@@ -146,80 +170,100 @@ const AdminProjectConfig: React.FC = () => {
               <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
                 <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight italic">Información de Campaña</h3>
 
-                {/* Modo de Triangulación Selector */}
-                <div className="border border-slate-100 rounded-2xl p-5 mb-4 bg-slate-50">
-                  <h4 className="text-sm font-black text-slate-700 uppercase tracking-tight mb-1">Modo de Triangulación / Canje</h4>
-                  <p className="text-[10px] text-slate-500 font-bold mb-4 leading-relaxed">
-                    Define cómo se validarán los canjes entre el Promotor, el Cliente y el Puesto de Venta.
-                  </p>
-                  <div className="space-y-3">
-                    {/* Flujo 1 */}
-                    <button
-                      type="button"
-                      onClick={() => setTriangulationMode('b2b2c_digital')}
-                      className={`w-full text-left p-4 rounded-xl border-2 transition-all ${triangulationMode === 'b2b2c_digital'
-                          ? 'border-brand-purple bg-brand-purple/5'
-                          : 'border-slate-200 bg-white hover:border-brand-purple/50'
-                        }`}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${triangulationMode === 'b2b2c_digital' ? 'border-brand-purple' : 'border-slate-300'}`}>
-                          {triangulationMode === 'b2b2c_digital' && <div className="w-1.5 h-1.5 rounded-full bg-brand-purple" />}
-                        </div>
-                        <span className={`text-[11px] font-black uppercase tracking-widest ${triangulationMode === 'b2b2c_digital' ? 'text-brand-purple' : 'text-slate-600'}`}>
-                          Flujo 1: Digital B2B2C (Aprobado por PDV)
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-slate-500 leading-relaxed font-medium pl-5">
-                        El cliente se registra online, el PDV lo aprueba desde su portal, y el promotor solo entrega el premio basándose en el QR.
-                      </p>
-                    </button>
-
-                    {/* Flujo 2 */}
-                    <button
-                      type="button"
-                      onClick={() => setTriangulationMode('b2b2c_mixed')}
-                      className={`w-full text-left p-4 rounded-xl border-2 transition-all ${triangulationMode === 'b2b2c_mixed'
-                          ? 'border-brand-purple bg-brand-purple/5'
-                          : 'border-slate-200 bg-white hover:border-brand-purple/50'
-                        }`}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${triangulationMode === 'b2b2c_mixed' ? 'border-brand-purple' : 'border-slate-300'}`}>
-                          {triangulationMode === 'b2b2c_mixed' && <div className="w-1.5 h-1.5 rounded-full bg-brand-purple" />}
-                        </div>
-                        <span className={`text-[11px] font-black uppercase tracking-widest ${triangulationMode === 'b2b2c_mixed' ? 'text-brand-purple' : 'text-slate-600'}`}>
-                          Flujo 2: Mixto (Canjista Valida)
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-slate-500 leading-relaxed font-medium pl-5">
-                        El cliente se registra online y recibe un código. Luego el promotor ingresa el código y le toma foto al comprobante firmado por el PDV.
-                      </p>
-                    </button>
-
-                    {/* Flujo 3 */}
-                    <button
-                      type="button"
-                      onClick={() => setTriangulationMode('physical')}
-                      className={`w-full text-left p-4 rounded-xl border-2 transition-all ${triangulationMode === 'physical'
-                          ? 'border-brand-purple bg-brand-purple/5'
-                          : 'border-slate-200 bg-white hover:border-brand-purple/50'
-                        }`}
-                    >
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${triangulationMode === 'physical' ? 'border-brand-purple' : 'border-slate-300'}`}>
-                          {triangulationMode === 'physical' && <div className="w-1.5 h-1.5 rounded-full bg-brand-purple" />}
-                        </div>
-                        <span className={`text-[11px] font-black uppercase tracking-widest ${triangulationMode === 'physical' ? 'text-brand-purple' : 'text-slate-600'}`}>
-                          Flujo 3: Físico Directo (Ticket de PDV)
-                        </span>
-                      </div>
-                      <p className="text-[10px] text-slate-500 leading-relaxed font-medium pl-5">
-                        No hay registro online del cliente. El PDV le da un ticket físico impreso y el promotor registra todos los datos directamente tomando foto al ticket.
-                      </p>
-                    </button>
+                {/* Switch Maestro de Triangulación */}
+                <div className="bg-brand-purple/5 border border-brand-purple/20 rounded-2xl p-5 mb-4 flex items-center justify-between">
+                  <div className="space-y-1">
+                    <h4 className="text-sm font-black text-brand-purple uppercase">Activar Modalidad de Triangulación</h4>
+                    <p className="text-[10px] text-slate-600 font-bold max-w-lg leading-relaxed">
+                      Si se activa, el proceso de canje pasará por un flujo de validación con el Puesto de Venta o el uso de Vouchers Físicos/Digitales.
+                    </p>
                   </div>
+                  <label className="relative inline-flex items-center cursor-pointer ml-4">
+                    <input
+                      type="checkbox"
+                      className="sr-only peer"
+                      checked={isTriangulationActive}
+                      onChange={(e) => setIsTriangulationActive(e.target.checked)}
+                    />
+                    <div className="w-14 h-7 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-0.5 after:left-[4px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-brand-teal drop-shadow-sm"></div>
+                  </label>
                 </div>
+
+                {isTriangulationActive && (
+                  <div className="border border-slate-100 rounded-2xl p-5 mb-4 bg-slate-50 animate-in fade-in zoom-in duration-300">
+                    <h4 className="text-sm font-black text-slate-700 uppercase tracking-tight mb-1">Modo de Triangulación / Canje</h4>
+                    <p className="text-[10px] text-slate-500 font-bold mb-4 leading-relaxed">
+                      Define cómo se validarán los canjes entre el Promotor, el Cliente y el Puesto de Venta.
+                    </p>
+                    <div className="space-y-3">
+                      {/* Flujo 1 */}
+                      <button
+                        type="button"
+                        onClick={() => setTriangulationMode('b2b2c_digital')}
+                        className={`w-full text-left p-4 rounded-xl border-2 transition-all ${triangulationMode === 'b2b2c_digital'
+                            ? 'border-brand-purple bg-brand-purple/5'
+                            : 'border-slate-200 bg-white hover:border-brand-purple/50'
+                          }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${triangulationMode === 'b2b2c_digital' ? 'border-brand-purple' : 'border-slate-300'}`}>
+                            {triangulationMode === 'b2b2c_digital' && <div className="w-1.5 h-1.5 rounded-full bg-brand-purple" />}
+                          </div>
+                          <span className={`text-[11px] font-black uppercase tracking-widest ${triangulationMode === 'b2b2c_digital' ? 'text-brand-purple' : 'text-slate-600'}`}>
+                            Flujo 1: Digital B2B2C (Aprobado por PDV)
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 leading-relaxed font-medium pl-5">
+                          El cliente se registra online, el PDV lo aprueba desde su portal, y el promotor solo entrega el premio basándose en el QR.
+                        </p>
+                      </button>
+
+                      {/* Flujo 2 */}
+                      <button
+                        type="button"
+                        onClick={() => setTriangulationMode('b2b2c_mixed')}
+                        className={`w-full text-left p-4 rounded-xl border-2 transition-all ${triangulationMode === 'b2b2c_mixed'
+                            ? 'border-brand-purple bg-brand-purple/5'
+                            : 'border-slate-200 bg-white hover:border-brand-purple/50'
+                          }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${triangulationMode === 'b2b2c_mixed' ? 'border-brand-purple' : 'border-slate-300'}`}>
+                            {triangulationMode === 'b2b2c_mixed' && <div className="w-1.5 h-1.5 rounded-full bg-brand-purple" />}
+                          </div>
+                          <span className={`text-[11px] font-black uppercase tracking-widest ${triangulationMode === 'b2b2c_mixed' ? 'text-brand-purple' : 'text-slate-600'}`}>
+                            Flujo 2: Mixto (Canjista Valida)
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 leading-relaxed font-medium pl-5">
+                          El cliente se registra online y recibe un código. Luego el promotor ingresa el código y le toma foto al comprobante firmado por el PDV.
+                        </p>
+                      </button>
+
+                      {/* Flujo 3 */}
+                      <button
+                        type="button"
+                        onClick={() => setTriangulationMode('physical')}
+                        className={`w-full text-left p-4 rounded-xl border-2 transition-all ${triangulationMode === 'physical'
+                            ? 'border-brand-purple bg-brand-purple/5'
+                            : 'border-slate-200 bg-white hover:border-brand-purple/50'
+                          }`}
+                      >
+                        <div className="flex items-center gap-2 mb-1">
+                          <div className={`w-3 h-3 rounded-full border-2 flex items-center justify-center ${triangulationMode === 'physical' ? 'border-brand-purple' : 'border-slate-300'}`}>
+                            {triangulationMode === 'physical' && <div className="w-1.5 h-1.5 rounded-full bg-brand-purple" />}
+                          </div>
+                          <span className={`text-[11px] font-black uppercase tracking-widest ${triangulationMode === 'physical' ? 'text-brand-purple' : 'text-slate-600'}`}>
+                            Flujo 3: Físico Directo (Ticket de PDV)
+                          </span>
+                        </div>
+                        <p className="text-[10px] text-slate-500 leading-relaxed font-medium pl-5">
+                          No hay registro online del cliente. El PDV le da un ticket físico impreso y el promotor registra todos los datos directamente tomando foto al ticket.
+                        </p>
+                      </button>
+                    </div>
+                  </div>
+                )}
 
                 {/* PDV Mode Selector */}
                 <div className="border border-slate-100 rounded-2xl p-5 mb-2">
@@ -481,6 +525,93 @@ const AdminProjectConfig: React.FC = () => {
                     {kvUrl && <img src={kvUrl} alt="KV Prev" className="w-full max-w-sm rounded-xl object-contain mt-2 shadow-md border border-slate-100" />}
                   </div>
 
+                </div>
+              </div>
+            )}
+            {activeTab === 'ticket' && (
+              <div className="space-y-6 animate-in fade-in slide-in-from-right-4 duration-300">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-black text-slate-800 uppercase tracking-tight italic flex items-center gap-2">
+                    <Ticket className="text-brand-purple" size={24} />
+                    Generador de Tickets
+                  </h3>
+                  <button onClick={handleAddTicketField} className="flex items-center gap-2 px-4 py-2 bg-slate-100 text-slate-700 rounded-xl font-bold text-xs uppercase hover:bg-slate-200 transition-colors">
+                    <Plus size={14} /> Añadir Campo
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  {/* Left Column: Form Builder */}
+                  <div className="space-y-4">
+                    {ticketFields.length === 0 ? (
+                      <div className="text-center py-10 bg-slate-50 rounded-2xl border border-dashed border-slate-300">
+                        <p className="text-xs text-slate-500 font-bold uppercase tracking-widest">No hay campos en el ticket</p>
+                      </div>
+                    ) : (
+                      ticketFields.map((field, idx) => (
+                        <div key={field.id} className="bg-white border border-slate-200 rounded-2xl p-4 shadow-sm flex gap-4 items-start group">
+                          <div className="w-6 h-6 rounded-full bg-slate-100 flex items-center justify-center text-[10px] font-black text-slate-400 mt-1">
+                            {idx + 1}
+                          </div>
+                          <div className="flex-1 space-y-2">
+                            <input
+                              type="text"
+                              className="w-full font-bold text-sm border-b border-slate-200 focus:border-brand-purple outline-none pb-1 bg-transparent"
+                              value={field.label}
+                              onChange={(e) => {
+                                const newFields = [...ticketFields];
+                                newFields[idx].label = e.target.value;
+                                setTicketFields(newFields);
+                              }}
+                              placeholder="Ej. Nombre del Cliente"
+                            />
+                          </div>
+                          <button
+                            onClick={() => setTicketFields(ticketFields.filter(f => f.id !== field.id))}
+                            className="text-slate-300 hover:text-red-500 transition-colors p-1"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Right Column: Ticket Preview 58mm */}
+                  <div>
+                    <div className="sticky top-6">
+                      <div className="bg-slate-100 p-6 rounded-3xl flex justify-center">
+                        <div className="bg-white w-[58mm] min-h-[100px] shadow-lg border border-slate-200 p-4 font-mono text-center relative mx-auto">
+                          {/* Ticket Header */}
+                          <div className="border-b border-dashed border-slate-400 pb-3 mb-3">
+                            {logoUrl && <img src={logoUrl} alt="Logo" className="h-8 mx-auto object-contain mb-2 grayscale" />}
+                            <h4 className="text-[12px] font-black uppercase leading-tight mb-1">{projectName || 'Campaña'}</h4>
+                            <p className="text-[9px] uppercase text-slate-500">Comprobante de Canje</p>
+                          </div>
+
+                          {/* Dynamic Fields */}
+                          <div className="text-left space-y-3 mb-4">
+                            {ticketFields.map((field) => (
+                              <div key={field.id} className="text-[9px]">
+                                <span className="font-bold uppercase inline-block mb-1">{field.label}:</span>
+                                <div className="border-b border-slate-300 w-full h-3"></div>
+                              </div>
+                            ))}
+                          </div>
+
+                          {/* Signature Line */}
+                          <div className="border-t border-dashed border-slate-400 pt-6 mt-6">
+                            <div className="border-t border-slate-800 w-3/4 mx-auto mb-1"></div>
+                            <p className="text-[8px] uppercase font-bold text-slate-600">Firma del Establecimiento</p>
+                            <p className="text-[7px] text-slate-400 mt-1">Este documento es necesario para el canje</p>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-center text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-4">
+                        Previsualización (Papel 58mm)
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}

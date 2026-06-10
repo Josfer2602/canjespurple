@@ -365,3 +365,35 @@ export const getHeatmap = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Error heatmap', error: err.message });
   }
 };
+
+export const getGeoHeatmap = async (req: Request, res: Response) => {
+  try {
+    const { projectId, dateFrom, dateTo, marketId, pointId, userId } = req.query;
+    
+    let query = `
+      SELECT ST_Y(location::geometry) as lat, ST_X(location::geometry) as lng
+      FROM "Redemption" r
+      WHERE r.location IS NOT NULL
+    `;
+    
+    if (projectId) query += ` AND r."projectId" = '${projectId}'`;
+    if (dateFrom) query += ` AND r."createdAt" >= '${dateFrom} 00:00:00'`;
+    if (dateTo) query += ` AND r."createdAt" <= '${dateTo} 23:59:59'`;
+    
+    if (userId || pointId || marketId) {
+      query += ` AND r."visitId" IN (
+        SELECT v.id FROM "Visit" v WHERE 1=1
+      `;
+      if (userId) query += ` AND v."userId" = '${userId}'`;
+      if (pointId) query += ` AND v."pointId" = '${pointId}'`;
+      if (marketId) query += ` AND v."marketId" = '${marketId}'`;
+      query += `)`;
+    }
+
+    const points: any[] = await prisma.$queryRawUnsafe(query);
+    
+    res.json(points);
+  } catch (err: any) {
+    res.status(500).json({ message: 'Error geo heatmap', error: err.message });
+  }
+};

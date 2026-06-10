@@ -11,8 +11,7 @@ import {
   Layers,
   Gift,
   FileText,
-  Receipt,
-  Ticket
+  Receipt
 } from 'lucide-react';
 
 interface AdminLayoutProps {
@@ -60,7 +59,6 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children }) => {
               <>
                 <AdminNavItem to="/admin/puntos" icon={<MapIcon size={18} />} label="Puntos Canje" />
                 <AdminNavItem to="/admin/personal" icon={<Users size={18} />} label="Personal Campo" />
-                <AdminNavItem to="/admin/tickets" icon={<Ticket size={18} />} label="Generador Tickets" />
               </>
             )}
 

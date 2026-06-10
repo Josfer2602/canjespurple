@@ -3,7 +3,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getHeatmap = exports.getBreakdown = exports.getPerformance = exports.getRecentRedemptions = exports.getGeoVisits = exports.getKpis = exports.getStats = void 0;
+exports.getGeoHeatmap = exports.getHeatmap = exports.getBreakdown = exports.getPerformance = exports.getRecentRedemptions = exports.getGeoVisits = exports.getKpis = exports.getStats = void 0;
 const db_1 = __importDefault(require("../config/db"));
 // Helper to build date filter from query params
 function buildDateFilter(dateFrom, dateTo) {
@@ -334,3 +334,37 @@ const getHeatmap = async (req, res) => {
     }
 };
 exports.getHeatmap = getHeatmap;
+const getGeoHeatmap = async (req, res) => {
+    try {
+        const { projectId, dateFrom, dateTo, marketId, pointId, userId } = req.query;
+        let query = `
+      SELECT ST_Y(location::geometry) as lat, ST_X(location::geometry) as lng
+      FROM "Redemption" r
+      WHERE r.location IS NOT NULL
+    `;
+        if (projectId)
+            query += ` AND r."projectId" = '${projectId}'`;
+        if (dateFrom)
+            query += ` AND r."createdAt" >= '${dateFrom} 00:00:00'`;
+        if (dateTo)
+            query += ` AND r."createdAt" <= '${dateTo} 23:59:59'`;
+        if (userId || pointId || marketId) {
+            query += ` AND r."visitId" IN (
+        SELECT v.id FROM "Visit" v WHERE 1=1
+      `;
+            if (userId)
+                query += ` AND v."userId" = '${userId}'`;
+            if (pointId)
+                query += ` AND v."pointId" = '${pointId}'`;
+            if (marketId)
+                query += ` AND v."marketId" = '${marketId}'`;
+            query += `)`;
+        }
+        const points = await db_1.default.$queryRawUnsafe(query);
+        res.json(points);
+    }
+    catch (err) {
+        res.status(500).json({ message: 'Error geo heatmap', error: err.message });
+    }
+};
+exports.getGeoHeatmap = getGeoHeatmap;

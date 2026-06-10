@@ -9,7 +9,6 @@ import AdminStaff from './pages/AdminStaff';
 import AdminProjectConfig from './pages/AdminProjectConfig';
 import AdminRedemptions from './pages/AdminRedemptions';
 import AdminVisits from './pages/AdminVisits';
-import AdminTickets from './pages/AdminTickets';
 import VisitForm from './pages/VisitForm';
 import RedemptionForm from './pages/RedemptionForm';
 import StaffHome from './pages/StaffHome';
@@ -78,7 +77,6 @@ function App() {
         <Route path="/admin/config" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminProjectConfig /></ProtectedRoute>} />
         <Route path="/admin/ajustes" element={<ProtectedRoute allowedRoles={['ADMIN']}><AdminProjectConfig /></ProtectedRoute>} />
         <Route path="/admin/canjes" element={<ProtectedRoute allowedRoles={['ADMIN', 'CLIENTE', 'SUPERVISOR']}><AdminRedemptions /></ProtectedRoute>} />
-        <Route path="/admin/tickets" element={<ProtectedRoute allowedRoles={['ADMIN', 'SUPERVISOR']}><AdminTickets /></ProtectedRoute>} />
 
         {/* Staff Routes */}
         <Route path="/staff" element={<ProtectedRoute allowedRoles={['STAFF']}><StaffHome /></ProtectedRoute>} />

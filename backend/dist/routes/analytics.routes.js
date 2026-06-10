@@ -10,4 +10,5 @@ router.get('/recent', analytics_controller_1.getRecentRedemptions);
 router.get('/performance', analytics_controller_1.getPerformance);
 router.get('/breakdown', analytics_controller_1.getBreakdown);
 router.get('/heatmap', analytics_controller_1.getHeatmap);
+router.get('/geo-heatmap', analytics_controller_1.getGeoHeatmap);
 exports.default = router;

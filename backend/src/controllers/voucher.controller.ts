@@ -94,8 +94,8 @@ export const getPointInfo = async (req: Request, res: Response) => {
     });
 
     if (!point) return res.status(404).json({ message: 'Punto no encontrado.' });
-    if (!(point.project.config as any)?.requires_qr_validation) {
-      return res.status(403).json({ message: 'Este proyecto no tiene activa la validación por QR.' });
+    if (!(point.project.config as any)?.is_triangulation_active) {
+      return res.status(403).json({ message: 'Este proyecto no tiene activa la validación por QR o Triangulación.' });
     }
 
     res.json(point);

@@ -6,7 +6,8 @@ import {
   getRecentRedemptions,
   getPerformance,
   getBreakdown,
-  getHeatmap
+  getHeatmap,
+  getGeoHeatmap
 } from '../controllers/analytics.controller';
 
 const router = Router();
@@ -18,5 +19,6 @@ router.get('/recent', getRecentRedemptions);
 router.get('/performance', getPerformance);
 router.get('/breakdown', getBreakdown);
 router.get('/heatmap', getHeatmap);
+router.get('/geo-heatmap', getGeoHeatmap);
 
 export default router;

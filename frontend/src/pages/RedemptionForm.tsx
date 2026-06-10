@@ -55,14 +55,17 @@ const RedemptionForm: React.FC = () => {
   const unit = projectConfig?.config?.redemption_unit || 'amount';
   const pdvMode = projectConfig?.config?.pdv_mode || 'specific';
   
-  const triangulationMode = projectConfig?.config?.triangulation_mode || (projectConfig?.config?.requires_qr_validation ? 'b2b2c_digital' : 'physical');
+  const isTriangulationActive = !!projectConfig?.config?.is_triangulation_active;
+  const triangulationMode = projectConfig?.config?.triangulation_mode || 'physical';
 
   // Inject dynamic photo slots based on triangulation mode
-  if (triangulationMode === 'b2b2c_mixed' && !photoSlots.find(p => p.key === 'signed_receipt')) {
-    photoSlots.push({ label: 'Comprobante Firmado por PDV', key: 'signed_receipt', required: true });
-  }
-  if (triangulationMode === 'physical' && !photoSlots.find(p => p.key === 'physical_ticket')) {
-    photoSlots.push({ label: 'Ticket Físico del PDV', key: 'physical_ticket', required: true });
+  if (isTriangulationActive) {
+    if (triangulationMode === 'b2b2c_mixed' && !photoSlots.find(p => p.key === 'signed_receipt')) {
+      photoSlots.push({ label: 'Comprobante Firmado por PDV', key: 'signed_receipt', required: true });
+    }
+    if (triangulationMode === 'physical' && !photoSlots.find(p => p.key === 'physical_ticket')) {
+      photoSlots.push({ label: 'Ticket Físico del PDV', key: 'physical_ticket', required: true });
+    }
   }
 
   useEffect(() => {
@@ -140,7 +143,7 @@ const RedemptionForm: React.FC = () => {
         return;
       }
 
-      if (triangulationMode === 'b2b2c_digital' || triangulationMode === 'b2b2c_mixed') {
+      if (isTriangulationActive && (triangulationMode === 'b2b2c_digital' || triangulationMode === 'b2b2c_mixed')) {
         if (!verifiedVoucher) {
           toast.error('Debes verificar un código de voucher válido primero.');
           setSubmitting(false);
@@ -166,11 +169,11 @@ const RedemptionForm: React.FC = () => {
         userId: user.id,
         pointId,
         visitId,
-        ticketNumber: (triangulationMode === 'b2b2c_digital' || triangulationMode === 'b2b2c_mixed') ? verifiedVoucher.ticketNo : '',
-        purchaseAmount: (triangulationMode === 'b2b2c_digital' || triangulationMode === 'b2b2c_mixed') ? parseFloat(verifiedVoucher.amount) : parseFloat(purchaseAmount),
-        consumerDni: (triangulationMode === 'b2b2c_digital' || triangulationMode === 'b2b2c_mixed') ? verifiedVoucher.dni : consumerDni,
+        ticketNumber: (isTriangulationActive && (triangulationMode === 'b2b2c_digital' || triangulationMode === 'b2b2c_mixed')) ? verifiedVoucher.ticketNo : '',
+        purchaseAmount: (isTriangulationActive && (triangulationMode === 'b2b2c_digital' || triangulationMode === 'b2b2c_mixed')) ? parseFloat(verifiedVoucher.amount) : parseFloat(purchaseAmount),
+        consumerDni: (isTriangulationActive && (triangulationMode === 'b2b2c_digital' || triangulationMode === 'b2b2c_mixed')) ? verifiedVoucher.dni : consumerDni,
         photos, 
-        extraData: { ...extraData, source: (triangulationMode === 'b2b2c_digital' || triangulationMode === 'b2b2c_mixed') ? 'voucher_b2b2c' : 'app_v2' },
+        extraData: { ...extraData, source: (isTriangulationActive && (triangulationMode === 'b2b2c_digital' || triangulationMode === 'b2b2c_mixed')) ? 'voucher_b2b2c' : 'app_v2' },
         coords,
         voucherId: verifiedVoucher?.id,
         items: rules.some(r => r.type === 'BY_PRODUCTS') && selectedProduct ? [{ productName: selectedProduct, quantity: parseFloat(purchaseAmount) }] : []
@@ -185,7 +188,7 @@ const RedemptionForm: React.FC = () => {
     }
   };
 
-  const isFormValid = (triangulationMode === 'b2b2c_digital' || triangulationMode === 'b2b2c_mixed') ? (!!verifiedVoucher && photoSlots.every((slot: any, idx: number) => !slot.required || photos[slot.key || `photo_${idx}`])) : (
+  const isFormValid = (isTriangulationActive && (triangulationMode === 'b2b2c_digital' || triangulationMode === 'b2b2c_mixed')) ? (!!verifiedVoucher && photoSlots.every((slot: any, idx: number) => !slot.required || photos[slot.key || `photo_${idx}`])) : (
     (rules.some(r => r.type === 'BY_PRODUCTS') ? (selectedProduct && purchaseAmount) : purchaseAmount) && 
     consumerDni && 
     photoSlots.every((slot: any, idx: number) => !slot.required || photos[slot.key || `photo_${idx}`])
@@ -233,7 +236,7 @@ const RedemptionForm: React.FC = () => {
                 <p className="text-xs text-slate-500 font-medium px-4">Ingresa el DNI del cliente para comenzar el registro.</p>
               </div>
 
-              {(triangulationMode === 'b2b2c_digital' || triangulationMode === 'b2b2c_mixed') ? (
+              {isTriangulationActive && (triangulationMode === 'b2b2c_digital' || triangulationMode === 'b2b2c_mixed') ? (
                 <div className="space-y-4">
                   <div className="space-y-2">
                     <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block ml-1">Código del Voucher del Cliente</label>
