@@ -605,13 +605,16 @@ export const getAdminVisits = async (req: Request, res: Response) => {
     // In our schema, point has projectId.
     const visits = await prisma.visit.findMany({
       where: {
-        point: {
-          projectId: projectId as string
-        }
+        OR: [
+          { point: { projectId: projectId as string } },
+          { market: { projectId: projectId as string } },
+          { user: { projectId: projectId as string } }
+        ]
       },
       include: {
         user: { select: { fullName: true } },
         point: { select: { name: true } },
+        market: { select: { name: true } },
         redemptions: { select: { reward: true } }
       },
       orderBy: { startTime: 'desc' }

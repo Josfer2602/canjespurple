@@ -57,7 +57,7 @@ const AdminVisits: React.FC = () => {
         inTime,
         outTime,
         v.user?.fullName || 'Desconocido',
-        v.point?.name || 'Local',
+        v.point?.name || v.market?.name || 'General',
         count,
         productsStr || 'Ninguno',
         v.isActive ? 'Activo' : 'Cerrado',
@@ -153,7 +153,7 @@ const AdminVisits: React.FC = () => {
                       <td className="px-6 py-4">
                         <div className="flex items-center gap-2">
                           <MapPin size={14} className="text-blue-500" />
-                          <span className="text-xs font-bold text-slate-600 uppercase tracking-tight">{item.point?.name}</span>
+                          <span className="text-xs font-bold text-slate-600 uppercase tracking-tight">{item.point?.name || item.market?.name || 'General'}</span>
                         </div>
                       </td>
                       <td className="px-6 py-4">
