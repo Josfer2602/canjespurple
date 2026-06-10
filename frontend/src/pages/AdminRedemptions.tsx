@@ -445,10 +445,10 @@ const AdminRedemptions: React.FC = () => {
                 <XIcon size={32} />
               </button>
               
-              <div className="relative w-full h-full flex items-center justify-center">
+              <div className="flex-1 flex flex-col items-center justify-center p-4 relative overflow-hidden" onClick={e => e.stopPropagation()}>
                 <img 
                   src={getDirectImgUrl(photoModal.photos[photoModal.index])} 
-                  alt="Evidencia" 
+                  alt={String(photoModal.photos[photoModal.index]).substring(0, 50) || "Evidencia"} 
                   className="max-w-full max-h-full object-contain rounded-2xl shadow-2xl"
                 />
               </div>
