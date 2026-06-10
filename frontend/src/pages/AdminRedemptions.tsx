@@ -6,8 +6,12 @@ import ConfirmModal from '../components/ConfirmModal';
 import toast from 'react-hot-toast';
 import { Check, X as XIcon, Image as ImageIcon, ChevronLeft, ChevronRight } from 'lucide-react';
 
-const getDirectImgUrl = (url: string) => {
+const getDirectImgUrl = (url: any) => {
   if (!url) return '';
+  if (typeof url !== 'string') return '';
+  if (url.startsWith('data:')) return url;
+  if (url.startsWith('http') && !url.includes('drive.google.com')) return url;
+
   const driveRegex = /file\/d\/([^\/]+)/;
   const ucRegex = /id=([^&]+)/;
   const id = url.match(driveRegex)?.[1] || url.match(ucRegex)?.[1];
@@ -146,11 +150,27 @@ const AdminRedemptions: React.FC = () => {
     }
   };
 
-  const openPhotoModal = (photos: string[]) => {
-    if (photos && photos.length > 0) {
-      setPhotoModal({ open: true, photos, index: 0 });
+  const openPhotoModal = (photos: any) => {
+    let arr: string[] = [];
+    if (Array.isArray(photos)) {
+      arr = photos.filter(p => typeof p === 'string');
+    } else if (typeof photos === 'object' && photos !== null) {
+      arr = Object.values(photos).filter(p => typeof p === 'string') as string[];
+    } else if (typeof photos === 'string') {
+      try {
+        const parsed = JSON.parse(photos);
+        if (Array.isArray(parsed)) arr = parsed.filter(p => typeof p === 'string');
+        else if (typeof parsed === 'object' && parsed !== null) arr = Object.values(parsed).filter(p => typeof p === 'string') as string[];
+        else arr = [photos];
+      } catch {
+        arr = [photos];
+      }
+    }
+
+    if (arr.length > 0) {
+      setPhotoModal({ open: true, photos: arr, index: 0 });
     } else {
-      toast.error('No hay evidencias para este canje');
+      toast.error('No hay evidencias válidas para este canje');
     }
   };
 
