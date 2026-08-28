@@ -30,6 +30,11 @@ const AdminPoints: React.FC = () => {
 
   const project = JSON.parse(localStorage.getItem('project') || '{}');
   const pdvMode = project.config?.pdv_mode || 'specific';
+  const isTriangulationActive = !!project.config?.is_triangulation_active;
+  const triangulationMode = project.config?.triangulation_mode || 'physical';
+  
+  // El QR para escaneo y el Acceso al portal PDV solo aplican en Flujo 1: Digital B2B2C
+  const showPdvDigitalTools = pdvMode === 'specific' && isTriangulationActive && triangulationMode === 'b2b2c_digital';
 
   const fetchData = async () => {
     try {
@@ -212,12 +217,12 @@ const AdminPoints: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          {pdvMode === 'specific' && (
+          {showPdvDigitalTools && (
             <button onClick={() => setQrModal({ point: p })} className="p-1.5 text-brand-purple hover:bg-brand-purple/10 rounded-lg transition-all" title="Ver / Descargar QR">
               <QrCode size={14} />
             </button>
           )}
-          {pdvMode === 'specific' && (
+          {showPdvDigitalTools && (
             p.userId
               ? <button onClick={() => handleGenerateAccess(p)} className="text-[8px] font-black text-green-600 bg-green-50 hover:bg-green-100 border border-green-200/60 px-2 py-1 rounded-md uppercase flex items-center gap-1 transition-all" title="Ver / Reestablecer Acceso">
                   <Key size={9}/>Acceso
