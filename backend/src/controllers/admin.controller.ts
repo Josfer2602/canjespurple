@@ -290,32 +290,41 @@ export const generatePdvAccess = async (req: Request, res: Response) => {
     const point = await prisma.point.findUnique({ where: { id } });
     if (!point) return res.status(404).json({ message: 'Punto no encontrado' });
 
-    // Si ya tiene usuario asignado, no hacemos nada o lo retornamos
-    if (point.userId) {
-      return res.status(400).json({ message: 'Este punto ya tiene un acceso generado. No se puede crear múltiples cuentas para el mismo punto.' });
-    }
-
-    // Generar credenciales: El email será un DNI ficticio o el telefono@pdv.com, o pdv_[id]@domain.com.
-    // Usaremos pdv_[shortid]@btl.com
     const shortId = point.id.substring(0, 6);
     const email = `pdv_${shortId}@canjes.com`;
     const plainPassword = Math.random().toString(36).substring(2, 8).toUpperCase();
     const passwordHash = await bcrypt.hash(plainPassword, 10);
 
-    const pdvUser = await prisma.user.create({
-      data: {
-        email,
-        passwordHash,
-        fullName: point.ownerName || point.name,
-        projectId: point.projectId,
-        role: 'PDV'
-      }
-    });
+    let updatedPoint = point;
 
-    const updatedPoint = await prisma.point.update({
-      where: { id: point.id },
-      data: { userId: pdvUser.id }
-    });
+    if (point.userId) {
+      // Si ya tiene usuario asignado, restablecer/actualizar su contraseña y datos
+      await prisma.user.update({
+        where: { id: point.userId },
+        data: {
+          passwordHash,
+          email,
+          fullName: point.ownerName || point.name,
+          role: 'PDV'
+        }
+      });
+    } else {
+      // Si no tiene usuario, crearlo y vincularlo al punto
+      const pdvUser = await prisma.user.create({
+        data: {
+          email,
+          passwordHash,
+          fullName: point.ownerName || point.name,
+          projectId: point.projectId,
+          role: 'PDV'
+        }
+      });
+
+      updatedPoint = await prisma.point.update({
+        where: { id: point.id },
+        data: { userId: pdvUser.id }
+      });
+    }
 
     res.json({ 
       success: true, 

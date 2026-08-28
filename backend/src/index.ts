@@ -18,7 +18,14 @@ const PORT = process.env.PORT || 4000;
 
 // Middleware
 app.use(cors({ 
-  origin: ['http://localhost:5173', 'http://localhost:5174', 'http://127.0.0.1:5173', 'http://127.0.0.1:5174', 'http://192.168.101.12:5173', process.env.FRONTEND_URL || 'https://canjes.simplegoapp.de'],
+  origin: function (origin, callback) {
+    // Permitir cualquier origen local o los origenes de produccion
+    if (!origin || origin.startsWith('http://localhost:') || origin.startsWith('http://127.0.0.1:') || origin.startsWith('http://192.168.') || origin === process.env.FRONTEND_URL || origin === 'https://canjes.simplegoapp.de') {
+      callback(null, true);
+    } else {
+      callback(new Error('No permitido por CORS'));
+    }
+  },
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']

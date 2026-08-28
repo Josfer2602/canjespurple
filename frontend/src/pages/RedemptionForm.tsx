@@ -310,7 +310,7 @@ const RedemptionForm: React.FC = () => {
             )}
 
             <div className="glass-card p-6 space-y-6">
-              {projectConfig?.config?.requires_qr_validation && verifiedVoucher ? (
+              {verifiedVoucher ? (
                  <div className="bg-slate-50 border border-slate-200 p-5 rounded-[2rem]">
                     <h3 className="text-xs font-black text-slate-500 uppercase tracking-widest mb-3">Resumen de Compra Validada</h3>
                     <div className="flex justify-between items-center bg-white p-4 rounded-xl border border-slate-100 mb-2">
@@ -420,7 +420,7 @@ const RedemptionForm: React.FC = () => {
 
               <div className="divider h-px bg-slate-100" />
 
-              {!projectConfig?.config?.requires_qr_validation && (
+              {!(verifiedVoucher && triangulationMode === 'b2b2c_digital') && (
                 <div className="space-y-4">
                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest block ml-1 italic">Evidencia Fotográfica ({photoSlots.length})</label>
                   <div className="grid grid-cols-2 gap-4">

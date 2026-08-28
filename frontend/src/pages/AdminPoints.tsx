@@ -30,7 +30,6 @@ const AdminPoints: React.FC = () => {
 
   const project = JSON.parse(localStorage.getItem('project') || '{}');
   const pdvMode = project.config?.pdv_mode || 'specific';
-  const requiresQr = project.config?.requires_qr_validation;
 
   const fetchData = async () => {
     try {
@@ -213,15 +212,19 @@ const AdminPoints: React.FC = () => {
           </div>
         </div>
         <div className="flex items-center gap-1 shrink-0">
-          {pdvMode === 'specific' && requiresQr && (
-            <button onClick={() => setQrModal({ point: p })} className="p-1.5 text-brand-purple hover:bg-brand-purple/10 rounded-lg transition-all" title="Ver QR">
+          {pdvMode === 'specific' && (
+            <button onClick={() => setQrModal({ point: p })} className="p-1.5 text-brand-purple hover:bg-brand-purple/10 rounded-lg transition-all" title="Ver / Descargar QR">
               <QrCode size={14} />
             </button>
           )}
-          {pdvMode === 'specific' && requiresQr && (
+          {pdvMode === 'specific' && (
             p.userId
-              ? <span className="text-[8px] font-black text-green-600 bg-green-50 px-2 py-1 rounded-md uppercase flex items-center gap-1"><Key size={9}/>Acceso</span>
-              : <button onClick={() => handleGenerateAccess(p)} className="text-[8px] font-black text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white px-2 py-1 rounded-md uppercase transition-all">+ Acceso</button>
+              ? <button onClick={() => handleGenerateAccess(p)} className="text-[8px] font-black text-green-600 bg-green-50 hover:bg-green-100 border border-green-200/60 px-2 py-1 rounded-md uppercase flex items-center gap-1 transition-all" title="Ver / Reestablecer Acceso">
+                  <Key size={9}/>Acceso
+                </button>
+              : <button onClick={() => handleGenerateAccess(p)} className="text-[8px] font-black text-blue-600 bg-blue-50 hover:bg-blue-600 hover:text-white px-2 py-1 rounded-md uppercase transition-all shadow-sm">
+                  + Acceso
+                </button>
           )}
           {showReassign && (
             <button
